@@ -1,0 +1,853 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Agilízate — Edición Figuras</title>
+</head>
+<body>
+<!-- AGILIZATE:CONTENT-START -->
+<style>
+  :root{
+    --felt-1:#171E3E; --felt-2:#0C1024;
+    --paper:#FFF6E3; --paper-edge:#E9DCBE; --ink:#1C1A2E;
+    --rojo:#E8413C; --azul:#2F6BFF; --amarillo:#FFC61A; --verde:#17B26A; --morado:#8B5CF6; --naranja:#FF7A1A;
+    --line:rgba(255,246,227,.16);
+    --text:#F4EFE2; --text-dim:rgba(244,239,226,.62);
+    --display:'Arial Black','Avenir Next Heavy','Helvetica Neue',Arial,sans-serif;
+    --body:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--body); color:var(--text);
+    background:radial-gradient(120% 90% at 50% 30%, var(--felt-1), var(--felt-2) 78%);
+    min-height:100vh; min-height:100dvh; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #stage{height:100vh; height:100dvh; display:flex; flex-direction:column}
+  .screen{flex:1; display:flex; flex-direction:column; min-height:0}
+  .hidden{display:none !important}
+  button{font-family:inherit; color:inherit; background:none; border:none; cursor:pointer}
+  button:focus-visible, .chip:focus-visible{outline:3px solid var(--amarillo); outline-offset:2px}
+  #countdown, #victory h2, #startBtn, #againBtn{font-weight:900}
+
+  /* ---------- Marca ---------- */
+  .brand{text-align:center; padding:clamp(18px,4vh,44px) 16px 6px}
+  .brand h1{
+    font-family:var(--display); font-weight:900;
+    font-size:clamp(2.4rem,9vw,4.6rem); line-height:.94; letter-spacing:-.02em;
+    transform:skewX(-6deg); text-wrap:balance;
+  }
+  .brand h1 .a1{color:var(--amarillo)} .brand h1 .a2{color:var(--rojo)}
+  .brand h1 .a3{color:var(--verde)}   .brand h1 .a4{color:var(--azul)}
+  .brand .sub{
+    margin-top:8px; font-size:.82rem; letter-spacing:.34em; text-transform:uppercase; color:var(--text-dim);
+  }
+
+  /* ---------- Configuración ---------- */
+  #setup{overflow-y:auto; align-items:center}
+  .panel{
+    width:min(560px,92vw); margin:18px auto; display:flex; flex-direction:column; gap:20px;
+    background:rgba(255,246,227,.05); border:1px solid var(--line); border-radius:20px;
+    padding:clamp(16px,3vw,28px);
+  }
+  .field{display:flex; flex-direction:column; gap:10px}
+  .field > label{
+    font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; color:var(--text-dim); font-weight:700;
+  }
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{
+    padding:10px 16px; border-radius:999px; border:1.5px solid var(--line);
+    font-size:.95rem; font-weight:700; color:var(--text-dim);
+    transition:transform .12s ease, background .12s ease, color .12s ease;
+  }
+  .chip[aria-pressed="true"]{
+    background:var(--amarillo); border-color:var(--amarillo); color:#241A00; transform:scale(1.04);
+  }
+  .dealhint{font-size:.85rem; color:var(--text-dim); line-height:1.5}
+  .dealhint b{color:var(--text)}
+  .names{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .names input{
+    width:100%; padding:10px 12px; border-radius:10px;
+    border:1.5px solid var(--line); border-left:5px solid var(--pc,#888);
+    background:rgba(255,246,227,.06); color:var(--text);
+    font-family:inherit; font-size:.95rem;
+    -webkit-user-select:text; user-select:text;
+  }
+  .names input::placeholder{color:var(--text-dim)}
+  .names input:focus{outline:2px solid var(--amarillo); outline-offset:1px}
+  #startBtn{
+    margin-top:4px; padding:18px; border-radius:16px;
+    background:var(--rojo); color:#FFF6E3;
+    font-family:var(--display); font-size:1.3rem; letter-spacing:.04em; transform:skewX(-4deg);
+    box-shadow:0 8px 0 #9C221E; transition:transform .1s ease, box-shadow .1s ease;
+  }
+  #startBtn:active{transform:skewX(-4deg) translateY(6px); box-shadow:0 2px 0 #9C221E}
+  .rules{
+    width:min(560px,92vw); margin:0 auto 28px; color:var(--text-dim);
+    font-size:.9rem; line-height:1.65;
+  }
+  .rules strong{color:var(--text)}
+
+  /* ---------- Mesa de juego ---------- */
+  #game{gap:6px; padding:6px}
+  .zones{display:flex; gap:6px; flex:0 0 30%; min-height:0}
+  .zone{
+    flex:1; min-width:0; border-radius:16px; border:2px solid var(--pc,#888);
+    background:color-mix(in srgb, var(--pc,#888) 12%, transparent);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    gap:2px; padding:6px 4px;
+    touch-action:manipulation; position:relative; overflow:hidden;
+  }
+  .zones.top .zone{transform:rotate(180deg)}
+  .zone .zhead{
+    display:flex; align-items:baseline; gap:8px; flex:0 0 auto; max-width:100%;
+  }
+  .zone .zname{
+    font-weight:800; font-size:clamp(.72rem,2vw,.95rem); color:var(--pc);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .zone .zcount{
+    font-size:clamp(.68rem,1.8vw,.8rem); color:var(--text-dim); font-variant-numeric:tabular-nums; white-space:nowrap;
+  }
+  .zone svg.playcard{flex:1; min-height:0; width:auto; max-width:96%}
+  .zone.frozen{opacity:.35; filter:saturate(.3)}
+  .zone.shake{animation:shake .4s ease}
+  .zone.win{background:color-mix(in srgb, var(--pc) 45%, transparent)}
+  .zone.done{justify-content:center}
+  .zone .zout{font-weight:800; color:var(--pc); font-size:clamp(.8rem,2.2vw,1rem)}
+  @keyframes shake{
+    0%,100%{translate:0 0} 20%{translate:-8px 0} 40%{translate:8px 0} 60%{translate:-6px 0} 80%{translate:6px 0}
+  }
+
+  #tableCenter{
+    flex:1 1 auto; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; position:relative;
+  }
+  #centerCard{
+    flex:1; min-height:0; width:auto; max-width:min(46vw,300px);
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,.5));
+  }
+  #centerCard.pulse{animation:pulse .45s ease}
+  @keyframes pulse{ 0%{transform:scale(.86) rotate(-4deg)} 60%{transform:scale(1.05)} 100%{transform:scale(1)} }
+
+  svg.playcard .sym{cursor:default}
+  .zone svg.playcard .sym{cursor:pointer}
+  svg.playcard .sym .hit{fill:transparent; pointer-events:all}
+
+  #countdown{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-size:clamp(4rem,18vw,9rem); color:var(--amarillo);
+    text-shadow:0 6px 0 rgba(0,0,0,.35); z-index:5; pointer-events:none;
+  }
+  #hud{
+    flex:0 0 auto; display:flex; gap:12px; align-items:center; font-size:.78rem; color:var(--text-dim);
+  }
+  #hud button{
+    border:1px solid var(--line); border-radius:8px; padding:4px 11px; font-size:.76rem; color:var(--text-dim);
+  }
+  #hud button:hover{color:var(--text)}
+
+  /* ---------- Victoria ---------- */
+  #victory{align-items:center; justify-content:center; gap:22px; text-align:center; padding:20px}
+  #victory .trophy{font-size:clamp(3rem,12vw,5.5rem); line-height:1}
+  #victory h2{
+    font-family:var(--display); font-size:clamp(2rem,8vw,3.6rem); transform:skewX(-5deg);
+    color:var(--wc,var(--amarillo)); text-wrap:balance;
+  }
+  #victory .standings{display:flex; flex-direction:column; gap:6px; color:var(--text-dim); font-variant-numeric:tabular-nums}
+  #victory .standings b{color:var(--text)}
+  #againBtn, #newSessionBtn, #backBtn{
+    padding:16px 34px; border-radius:14px; background:var(--verde); color:#04240F;
+    font-family:var(--display); font-weight:900; font-size:1.15rem; transform:skewX(-4deg);
+    box-shadow:0 7px 0 #0B6B3E;
+  }
+  #againBtn:active, #newSessionBtn:active, #backBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
+
+  /* ---------- Resultados de la sesión e historial ---------- */
+  #final, #records{align-items:center; justify-content:flex-start; gap:20px; padding:28px 20px; overflow-y:auto; text-align:center}
+  #final .trophy, #records .trophy{font-size:clamp(2.6rem,10vw,4.5rem); line-height:1}
+  #final h2, #records h2{
+    font-family:var(--display); font-weight:900; font-size:clamp(1.5rem,6.5vw,2.7rem);
+    transform:skewX(-5deg); color:var(--wc,var(--amarillo)); text-wrap:balance;
+  }
+  .ghost{
+    padding:12px; border-radius:12px; border:1.5px solid var(--line);
+    font-weight:700; color:var(--text-dim); font-size:.95rem;
+  }
+  .ghost:hover{color:var(--text)}
+  .danger{color:var(--rojo); font-size:.85rem; text-decoration:underline; padding:6px}
+  .subnote{font-size:.78rem; color:var(--text-dim)}
+  .chip .x{opacity:.55; margin-left:7px; font-weight:900}
+  .results{border-collapse:collapse; width:min(440px,92vw)}
+  .results caption{
+    text-align:left; font-size:.7rem; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--text-dim); font-weight:700; padding-bottom:8px;
+  }
+  .results th, .results td{
+    padding:8px 12px; border-bottom:1px solid var(--line); text-align:left;
+    font-size:.95rem; font-variant-numeric:tabular-nums;
+  }
+  .results th{font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--text-dim); font-weight:700}
+  .results td.num{text-align:right}
+  .results td b{font-weight:800}
+
+  @media (prefers-reduced-motion:reduce){
+    .zone.shake, #centerCard.pulse{animation:none}
+  }
+</style>
+
+<div id="stage">
+
+  <!-- Pantalla de configuración -->
+  <section id="setup" class="screen">
+    <header class="brand">
+      <h1><span class="a1">AGI</span><span class="a2">LÍ</span><span class="a3">ZA</span><span class="a4">TE</span></h1>
+      <p class="sub">Edición figuras · 2 a 6 jugadores</p>
+    </header>
+    <div class="panel">
+      <div class="field">
+        <label>Jugadores</label>
+        <div class="chips" id="playersChips" role="group" aria-label="Número de jugadores"></div>
+      </div>
+      <div class="field">
+        <label>Cartas por jugador</label>
+        <div class="chips" id="cardsChips" role="group" aria-label="Cartas por jugador"></div>
+        <p class="dealhint" id="dealHint"></p>
+      </div>
+      <div class="field">
+        <label>Partidas en la sesión</label>
+        <div class="chips" id="gamesChips" role="group" aria-label="Partidas de la sesión">
+          <button class="chip" data-v="1" aria-pressed="false">1 partida</button>
+          <button class="chip" data-v="3" aria-pressed="true">3 partidas</button>
+          <button class="chip" data-v="5" aria-pressed="false">5 partidas</button>
+          <button class="chip" data-v="7" aria-pressed="false">7 partidas</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nombres de los jugadores</label>
+        <div class="names" id="nameFields"></div>
+      </div>
+      <div class="field hidden" id="savedField">
+        <label>Jugadores guardados — toca uno para usarlo</label>
+        <div class="chips" id="savedChips"></div>
+      </div>
+      <button id="startBtn">¡A JUGAR!</button>
+      <button id="recordsBtn" class="ghost" type="button">📜 Historial de partidas</button>
+    </div>
+    <p class="rules">
+      <strong>Cómo se juega:</strong> el mazo tiene <strong>55 cartas</strong> y cada carta trae 8 objetos
+      de la vida diaria (aviones, carros, celulares, comida…). Entre <strong>cualquier</strong> par de cartas
+      siempre hay <strong>exactamente un objeto igual</strong>. Se reparten las cartas y la que sobra abre el
+      centro de la mesa.
+      Cada jugador ve solo la <strong>carta de encima de su pila</strong> — las demás quedan boca abajo,
+      nadie sabe qué cartas te quedan. Todos juegan <strong>al mismo tiempo</strong>: encuentra la figura que tu
+      carta comparte con la del centro y <strong>tócala en tu carta</strong>. Si aciertas, tu carta cae al centro
+      y se vuelve la nueva carta a igualar. Si te equivocas, te congelas un instante.
+      <strong>Gana el primero en quedarse sin cartas.</strong> Pongan la tableta o el teléfono al centro de la
+      mesa: las zonas de arriba se ven al derecho para los de enfrente.
+    </p>
+  </section>
+
+  <!-- Mesa de juego -->
+  <section id="game" class="screen hidden">
+    <div class="zones top" id="zonesTop"></div>
+    <div id="tableCenter">
+      <div id="countdown" class="hidden"></div>
+      <svg id="centerCard" class="playcard" viewBox="0 0 100 100" aria-label="Carta del centro"></svg>
+      <div id="hud">
+        <span id="deckLabel"></span>
+        <button id="muteBtn" type="button">🔊 Sonido</button>
+        <button id="exitBtn" type="button">Salir</button>
+      </div>
+    </div>
+    <div class="zones bottom" id="zonesBottom"></div>
+  </section>
+
+  <!-- Victoria de una partida -->
+  <section id="victory" class="screen hidden">
+    <div class="trophy">🏆</div>
+    <h2 id="winnerText"></h2>
+    <div class="standings" id="standings"></div>
+    <div class="standings" id="sessionScore"></div>
+    <button id="againBtn">Siguiente partida</button>
+  </section>
+
+  <!-- Resultados de la sesión -->
+  <section id="final" class="screen hidden">
+    <div class="trophy">🎉</div>
+    <h2 id="champText"></h2>
+    <table class="results">
+      <caption>Partidas jugadas</caption>
+      <thead><tr><th>Partida</th><th>Ganador</th></tr></thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+    <table class="results">
+      <caption>Marcador final</caption>
+      <thead><tr><th>Jugador</th><th>Victorias</th></tr></thead>
+      <tbody id="totalsBody"></tbody>
+    </table>
+    <button id="newSessionBtn">Nueva sesión</button>
+  </section>
+
+  <!-- Historial guardado -->
+  <section id="records" class="screen hidden">
+    <div class="trophy">📜</div>
+    <h2>Historial</h2>
+    <table class="results">
+      <caption>Jugadores guardados</caption>
+      <thead><tr><th>Jugador</th><th>Partidas</th><th>Victorias</th></tr></thead>
+      <tbody id="recPlayers"></tbody>
+    </table>
+    <table class="results">
+      <caption>Últimas partidas</caption>
+      <thead><tr><th>Fecha</th><th>Jugadores</th><th>Ganador</th></tr></thead>
+      <tbody id="recGames"></tbody>
+    </table>
+    <p class="subnote">El historial se guarda en este dispositivo y navegador.</p>
+    <button id="backBtn">Volver</button>
+    <button id="clearBtn" class="danger" type="button">Borrar historial</button>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- Símbolos: 57 objetos cotidianos ---------- */
+  var EMOJIS = [
+    '✈️','🚗','🚌','🏍️','🚲','🚀','🚁','⛵','🚂',
+    '📱','💻','⌚','📷','🎧','📺','🔑','💡','🔋',
+    '⚽','🏀','🎮','🎲','🎸','🎤','🏆','🎬',
+    '🍕','🍔','🌮','🍦','🍎','🍌','☕','🎂','🍿',
+    '🐶','🐱','🐢','🦋','🐠','🌵','🌻','🌈','⭐','🌙',
+    '☀️','⚡','🔥','❄️','👟','🕶️','🎩','🎒','✂️','📚','⏰','🛒'
+  ]; // 57 símbolos únicos
+
+  /* ---------- Mazo tipo plano proyectivo (orden 7):
+     57 cartas, 8 símbolos por carta, cualquier par de cartas
+     comparte exactamente un símbolo. ---------- */
+  function buildDeck(){
+    var N=7, cards=[], m, b, x, y;
+    // punto (x,y) → id x*7+y (0..48); infinito de pendiente m → 49+m; infinito vertical → 56
+    for(m=0; m<N; m++){
+      for(b=0; b<N; b++){
+        var c=[];
+        for(x=0; x<N; x++) c.push(x*N + (m*x+b)%N);
+        c.push(49+m);
+        cards.push(c);
+      }
+    }
+    for(x=0; x<N; x++){
+      var v=[];
+      for(y=0; y<N; y++) v.push(x*N+y);
+      v.push(56);
+      cards.push(v);
+    }
+    var inf=[];
+    for(m=0; m<N; m++) inf.push(49+m);
+    inf.push(56);
+    cards.push(inf);
+    return cards; // 57 cartas
+  }
+  var DECK = buildDeck();
+
+  /* ---------- Aleatoriedad con semilla (para dibujar cada carta igual siempre) ---------- */
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed>>>15), 1 | seed);
+      t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+      return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr){
+    var a=arr.slice();
+    for(var i=a.length-1; i>0; i--){
+      var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t;
+    }
+    return a;
+  }
+
+  /* ---------- Dibujo de cartas (redondas, 8 figuras) ---------- */
+  var RING_SCALES=[1.12, .85, 1.0, .9, 1.08, .8, .95];
+  function cardSVG(cardIdx, interactive){
+    var syms = DECK[cardIdx];
+    var rnd = mulberry32(cardIdx*7919+13);
+    var out = '<circle cx="50" cy="50" r="48.5" fill="'+'#FFF6E3'+'" stroke="#E9DCBE" stroke-width="2"/>' +
+              '<circle cx="50" cy="50" r="44.5" fill="none" stroke="#EFE3C4" stroke-width="1"/>';
+    var order = syms.slice();
+    // orden barajado con semilla para que el centro no sea siempre el mismo símbolo
+    for(var i=order.length-1; i>0; i--){
+      var j=Math.floor(rnd()*(i+1)), t=order[i]; order[i]=order[j]; order[j]=t;
+    }
+    var baseAngle = rnd()*360;
+    for(i=0; i<8; i++){
+      var s=order[i], px, py, sc;
+      if(i===0){ px=50; py=50; sc=1.3; }
+      else{
+        var ang=(baseAngle + (i-1)*(360/7)) * Math.PI/180;
+        px=50+29.5*Math.cos(ang); py=50+29.5*Math.sin(ang); sc=RING_SCALES[i-1];
+      }
+      var rot=Math.floor(rnd()*360);
+      out += '<g class="sym" data-sym="'+s+'" '+
+             'transform="translate('+px.toFixed(1)+' '+py.toFixed(1)+') rotate('+rot+') scale('+sc+')">'+
+             '<text font-size="15" text-anchor="middle" dominant-baseline="central" dy="0.5">'+EMOJIS[s]+'</text>'+
+             (interactive ? '<circle class="hit" r="11.5"/>' : '')+
+             '</g>';
+    }
+    return out;
+  }
+
+  /* ---------- Sonido ---------- */
+  var audioCtx=null, muted=false;
+  function beep(freq, dur, type, when, gain){
+    if(muted) return;
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      var t = audioCtx.currentTime + (when||0);
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type||'square'; o.frequency.value = freq;
+      g.gain.setValueAtTime(gain||0.08, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t+dur+0.02);
+    }catch(e){}
+  }
+  var sfx = {
+    good:  function(){ beep(523,.09,'square'); beep(784,.12,'square',.09); beep(1046,.18,'square',.2); },
+    bad:   function(){ beep(160,.25,'sawtooth',0,.09); },
+    count: function(){ beep(440,.08,'triangle',0,.06); },
+    go:    function(){ beep(880,.25,'triangle',0,.08); },
+    win:   function(){ [523,659,784,1046].forEach(function(f,i){ beep(f,.16,'square',i*.12); }); }
+  };
+  document.getElementById('muteBtn').addEventListener('click', function(){
+    muted = !muted;
+    this.textContent = muted ? '🔇 Sin sonido' : '🔊 Sonido';
+  });
+
+  /* ---------- Memoria en este dispositivo (usuarios e historial) ---------- */
+  var STORE_KEY='agilizate.v1';
+  function loadStore(){
+    try{
+      var s=JSON.parse(localStorage.getItem(STORE_KEY));
+      if(s && s.players && s.history) return s;
+    }catch(e){}
+    return {players:{}, history:[]};
+  }
+  var store=loadStore();
+  function saveStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){} }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function isDefaultName(n){ return /^jugador \d+$/i.test(n); }
+
+  // registra una partida terminada: historial + estadísticas de usuarios con nombre
+  function registerResult(winner, participants, cardsDealt){
+    store.history.unshift({
+      t:Date.now(),
+      players:participants.map(function(p){ return p.name; }),
+      winner:winner.name,
+      cards:cardsDealt
+    });
+    if(store.history.length>200) store.history.length=200;
+    participants.forEach(function(p){
+      if(isDefaultName(p.name)) return;
+      var k=p.name.toLowerCase();
+      var u=store.players[k] || {name:p.name, games:0, wins:0, last:0};
+      u.games++; if(p===winner) u.wins++;
+      u.last=Date.now();
+      store.players[k]=u;
+    });
+    saveStore();
+    renderSavedChips();
+  }
+
+  /* ---------- Configuración ---------- */
+  var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
+  var cfg = {players:2, cards:9, games:3}; // cards: número o 'max'
+  var names = []; // nombres escritos por los jugadores
+
+  function savedUsers(){
+    return Object.keys(store.players).map(function(k){ return store.players[k]; })
+      .sort(function(a,b){ return (b.last||0)-(a.last||0); });
+  }
+  function renderSavedChips(){
+    var field=document.getElementById('savedField');
+    var box=document.getElementById('savedChips');
+    var users=savedUsers();
+    if(!users.length){ field.classList.add('hidden'); box.innerHTML=''; return; }
+    field.classList.remove('hidden');
+    box.innerHTML=users.map(function(u){
+      return '<button class="chip" type="button" data-name="'+esc(u.name)+'">'+esc(u.name)+
+             '<span class="x" data-del="'+esc(u.name.toLowerCase())+'" title="Olvidar a '+esc(u.name)+'">×</span></button>';
+    }).join('');
+  }
+  document.getElementById('savedChips').addEventListener('click', function(e){
+    var del=e.target.closest('[data-del]');
+    if(del){
+      delete store.players[del.getAttribute('data-del')];
+      saveStore(); renderSavedChips();
+      return;
+    }
+    var chip=e.target.closest('.chip');
+    if(!chip) return;
+    var name=chip.getAttribute('data-name');
+    var inputs=document.querySelectorAll('#nameFields input');
+    var i, taken=false;
+    for(i=0;i<inputs.length;i++){
+      if(inputs[i].value.trim().toLowerCase()===name.toLowerCase()) taken=true;
+    }
+    if(taken) return; // ese jugador ya está en la mesa
+    for(i=0;i<inputs.length;i++){
+      if(!inputs[i].value.trim()){
+        inputs[i].value=name; names[i]=name;
+        break;
+      }
+    }
+  });
+
+  function maxPer(P){ return Math.floor(54/P); }
+  function perPlayer(P){
+    var mx = maxPer(P);
+    return cfg.cards==='max' ? mx : Math.min(cfg.cards, mx);
+  }
+  function updateDealHint(){
+    var per = perPlayer(cfg.players);
+    var used = per*cfg.players + 1;
+    var msg = 'Se reparten <b>'+per+' cartas a cada uno</b> de los '+cfg.players+
+              ' jugadores; una carta abre el centro';
+    if(used < 55) msg += ' y '+(55-used)+' quedan fuera';
+    document.getElementById('dealHint').innerHTML = msg + '.';
+  }
+
+  function buildCardChips(){
+    var box = document.getElementById('cardsChips');
+    var mx = maxPer(cfg.players);
+    box.innerHTML='';
+    [5,7,9].filter(function(v){ return v<mx; }).forEach(function(v){
+      var b=document.createElement('button');
+      b.className='chip'; b.dataset.v=v; b.textContent=v+' cartas';
+      box.appendChild(b);
+    });
+    var m=document.createElement('button');
+    m.className='chip'; m.dataset.v='max'; m.textContent='Máximo ('+mx+')';
+    box.appendChild(m);
+    var sel = (cfg.cards==='max' || cfg.cards>=mx) ? 'max' : String(cfg.cards);
+    box.querySelectorAll('.chip').forEach(function(c){
+      c.setAttribute('aria-pressed', c.dataset.v===sel ? 'true':'false');
+    });
+  }
+
+  function buildNameFields(){
+    var box = document.getElementById('nameFields');
+    box.innerHTML='';
+    for(var i=0; i<cfg.players; i++){
+      var inp=document.createElement('input');
+      inp.type='text'; inp.maxLength=14;
+      inp.placeholder='Jugador '+(i+1);
+      inp.value=names[i]||'';
+      inp.setAttribute('aria-label','Nombre del jugador '+(i+1));
+      inp.style.setProperty('--pc', PLAYER_COLORS[i]);
+      (function(idx){
+        inp.addEventListener('input', function(){ names[idx]=this.value; });
+      })(i);
+      box.appendChild(inp);
+    }
+  }
+
+  var playersBox = document.getElementById('playersChips');
+  for(var n=2; n<=6; n++){
+    var b = document.createElement('button');
+    b.className='chip'; b.dataset.v=n; b.textContent=n+' jugadores';
+    b.setAttribute('aria-pressed', n===2 ? 'true':'false');
+    playersBox.appendChild(b);
+  }
+  playersBox.addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    playersBox.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+    cfg.players = +chip.dataset.v;
+    buildCardChips(); buildNameFields(); updateDealHint();
+  });
+  document.getElementById('cardsChips').addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+    cfg.cards = chip.dataset.v==='max' ? 'max' : +chip.dataset.v;
+    updateDealHint();
+  });
+  document.getElementById('gamesChips').addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+    cfg.games = +chip.dataset.v;
+  });
+  buildCardChips(); buildNameFields(); updateDealHint();
+
+  /* ---------- Estado ---------- */
+  var state='idle';          // idle | countdown | playing | over
+  var players=[];            // {i, name, color, pile:[cardIdx...], frozen, el, svg, countEl}
+  var centerIdx=-1;
+  var pendingTimers=[];
+  var session={planned:1, played:0, wins:[], history:[]};
+
+  var $game=document.getElementById('game'), $setup=document.getElementById('setup'),
+      $victory=document.getElementById('victory'),
+      $center=document.getElementById('centerCard'), $count=document.getElementById('countdown');
+
+  function later(fn, ms){ pendingTimers.push(setTimeout(fn, ms)); }
+  function clearTimers(){ pendingTimers.forEach(clearTimeout); pendingTimers=[]; }
+
+  /* ---------- Zonas ---------- */
+  function buildZones(){
+    players=[];
+    var top=document.getElementById('zonesTop'), bottom=document.getElementById('zonesBottom');
+    top.innerHTML=''; bottom.innerHTML='';
+    var nBottom=Math.ceil(cfg.players/2);
+    for(var i=0; i<cfg.players; i++){
+      var pname=(names[i]||'').trim() || 'Jugador '+(i+1);
+      var p={i:i, name:pname, color:PLAYER_COLORS[i], pile:[], frozen:false};
+      var z=document.createElement('div');
+      z.className='zone';
+      z.style.setProperty('--pc', p.color);
+      z.innerHTML='<div class="zhead"><span class="zname">'+esc(p.name)+'</span>'+
+                  '<span class="zcount"></span></div>'+
+                  '<svg class="playcard" viewBox="0 0 100 100" aria-label="Carta de '+esc(p.name)+'"></svg>';
+      p.el=z; p.svg=z.querySelector('svg'); p.countEl=z.querySelector('.zcount');
+      (i<nBottom ? bottom : top).appendChild(z);
+      attachTap(p);
+      players.push(p);
+    }
+    top.style.display = cfg.players>nBottom ? '' : 'none';
+  }
+
+  function attachTap(p){
+    p.svg.addEventListener('pointerdown', function(e){
+      var g = e.target.closest('.sym');
+      if(!g) return;
+      e.preventDefault();
+      tapSymbol(p, +g.getAttribute('data-sym'));
+    });
+  }
+
+  /* ---------- Render ---------- */
+  function renderCenter(){
+    $center.innerHTML = cardSVG(centerIdx, false);
+    $center.classList.remove('pulse'); void $center.offsetWidth; $center.classList.add('pulse');
+  }
+  function renderPlayer(p){
+    var left = p.pile.length;
+    if(left===0){
+      p.el.classList.add('done');
+      p.svg.remove();
+      if(!p.el.querySelector('.zout')){
+        var d=document.createElement('div'); d.className='zout'; d.textContent='¡Sin cartas!';
+        p.el.appendChild(d);
+      }
+      p.countEl.textContent='0 cartas';
+      return;
+    }
+    p.svg.innerHTML = cardSVG(p.pile[p.pile.length-1], true);
+    p.countEl.textContent = left+(left===1?' carta':' cartas');
+  }
+
+  /* ---------- Juego ---------- */
+  function tapSymbol(p, sym){
+    if(state!=='playing' || p.frozen || p.pile.length===0) return;
+    if(DECK[centerIdx].indexOf(sym) !== -1){
+      // símbolo compartido encontrado: la carta del jugador pasa al centro
+      centerIdx = p.pile.pop();
+      renderCenter();
+      renderPlayer(p);
+      sfx.good();
+      p.el.classList.remove('shake');
+      p.el.classList.add('win');
+      later(function(){ p.el.classList.remove('win'); }, 450);
+      if(p.pile.length===0) endGame(p);
+    }else{
+      p.frozen=true;
+      p.el.classList.add('frozen','shake');
+      sfx.bad();
+      later(function(){
+        p.frozen=false;
+        p.el.classList.remove('frozen','shake');
+      }, 800);
+    }
+  }
+
+  function startGame(){
+    clearTimers();
+    buildZones();
+    // 55 cartas: del mazo de 57 se apartan 2 al azar
+    var order = shuffle(DECK.map(function(_, i){ return i; }));
+    var deal = order.slice(2); // 55
+    centerIdx = deal[0];
+    var per = perPlayer(cfg.players);
+    players.forEach(function(p, i){
+      p.pile = deal.slice(1+i*per, 1+(i+1)*per);
+    });
+    document.getElementById('deckLabel').textContent =
+      'Partida '+(session.played+1)+' de '+session.planned+' · '+per+' cartas por jugador';
+    $setup.classList.add('hidden'); $victory.classList.add('hidden'); $game.classList.remove('hidden');
+    $center.innerHTML='';
+    players.forEach(function(p){ p.countEl.textContent = p.pile.length+' cartas'; });
+    state='countdown';
+    $count.classList.remove('hidden');
+    var steps=['3','2','1','¡YA!'];
+    steps.forEach(function(s,i){
+      later(function(){
+        $count.textContent=s;
+        if(s==='¡YA!'){ sfx.go(); } else { sfx.count(); }
+      }, i*700);
+    });
+    later(function(){
+      $count.classList.add('hidden');
+      renderCenter();
+      players.forEach(renderPlayer);
+      state='playing';
+    }, steps.length*700);
+  }
+
+  function endGame(winner){
+    clearTimers();
+    state='over';
+    session.played++;
+    session.wins[winner.i]++;
+    session.history.push({n:session.played, name:winner.name, color:winner.color});
+    registerResult(winner, players, perPlayer(cfg.players));
+    later(function(){
+      $game.classList.add('hidden');
+      $victory.classList.remove('hidden');
+      document.getElementById('winnerText').textContent=
+        '¡'+winner.name+' gana la partida '+session.played+'!';
+      document.getElementById('victory').style.setProperty('--wc', winner.color);
+      var sorted=players.slice().sort(function(a,b){ return a.pile.length-b.pile.length; });
+      document.getElementById('standings').innerHTML=sorted.map(function(p){
+        var left=p.pile.length;
+        return '<span><b style="color:'+p.color+'">'+esc(p.name)+'</b> — '+
+               (left===0 ? 'sin cartas' : 'le quedaron '+left)+'</span>';
+      }).join('');
+      document.getElementById('sessionScore').innerHTML=
+        '<span>Marcador de la sesión ('+session.played+' de '+session.planned+' partidas):</span>'+
+        players.map(function(p){
+          var w=session.wins[p.i];
+          return '<span><b style="color:'+p.color+'">'+esc(p.name)+'</b> — '+
+                 w+(w===1?' victoria':' victorias')+'</span>';
+        }).join('');
+      document.getElementById('againBtn').textContent =
+        session.played < session.planned
+          ? 'Partida '+(session.played+1)+' de '+session.planned
+          : 'Ver resultados finales';
+      sfx.win();
+    }, 900);
+  }
+
+  function showFinal(){
+    state='idle';
+    $game.classList.add('hidden'); $victory.classList.add('hidden');
+    var $final=document.getElementById('final');
+    $final.classList.remove('hidden');
+    var best=Math.max.apply(null, session.wins);
+    var champs=players.filter(function(p){ return session.wins[p.i]===best && best>0; });
+    var champText=document.getElementById('champText');
+    if(champs.length===1){
+      champText.textContent='¡'+champs[0].name+' es quien más ganó!';
+      $final.style.setProperty('--wc', champs[0].color);
+    }else if(champs.length>1){
+      champText.textContent='¡Empate entre '+champs.map(function(p){ return p.name; }).join(' y ')+'!';
+      $final.style.setProperty('--wc', 'var(--amarillo)');
+    }else{
+      champText.textContent='Sesión terminada';
+      $final.style.setProperty('--wc', 'var(--amarillo)');
+    }
+    document.getElementById('historyBody').innerHTML =
+      session.history.length
+        ? session.history.map(function(h){
+            return '<tr><td>Partida '+h.n+'</td><td><b style="color:'+h.color+'">'+esc(h.name)+'</b></td></tr>';
+          }).join('')
+        : '<tr><td colspan="2">No se completó ninguna partida.</td></tr>';
+    var order=players.slice().sort(function(a,b){ return session.wins[b.i]-session.wins[a.i]; });
+    document.getElementById('totalsBody').innerHTML = order.map(function(p){
+      return '<tr><td><b style="color:'+p.color+'">'+esc(p.name)+'</b></td>'+
+             '<td class="num">'+session.wins[p.i]+'</td></tr>';
+    }).join('');
+  }
+
+  function startSession(){
+    session={planned:cfg.games, played:0, wins:[], history:[]};
+    for(var i=0; i<cfg.players; i++) session.wins.push(0);
+    startGame();
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startSession);
+  document.getElementById('againBtn').addEventListener('click', function(){
+    if(session.played < session.planned){
+      $victory.classList.add('hidden');
+      startGame();
+    }else{
+      showFinal();
+    }
+  });
+  document.getElementById('newSessionBtn').addEventListener('click', function(){
+    document.getElementById('final').classList.add('hidden');
+    $setup.classList.remove('hidden'); state='idle';
+  });
+
+  /* ---------- Pantalla de historial ---------- */
+  function fmtDate(t){
+    try{
+      return new Date(t).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+    }catch(e){ return new Date(t).toLocaleString(); }
+  }
+  function renderRecords(){
+    var users=savedUsers().slice().sort(function(a,b){ return b.wins-a.wins || b.games-a.games; });
+    document.getElementById('recPlayers').innerHTML = users.length
+      ? users.map(function(u){
+          return '<tr><td><b>'+esc(u.name)+'</b></td>'+
+                 '<td class="num">'+u.games+'</td><td class="num">'+u.wins+'</td></tr>';
+        }).join('')
+      : '<tr><td colspan="3">Aún no hay jugadores guardados. Escribe tu nombre antes de jugar.</td></tr>';
+    document.getElementById('recGames').innerHTML = store.history.length
+      ? store.history.slice(0,20).map(function(h){
+          return '<tr><td>'+fmtDate(h.t)+'</td>'+
+                 '<td>'+h.players.map(esc).join(', ')+'</td>'+
+                 '<td><b>'+esc(h.winner)+'</b></td></tr>';
+        }).join('')
+      : '<tr><td colspan="3">Aún no se ha jugado ninguna partida.</td></tr>';
+  }
+  document.getElementById('recordsBtn').addEventListener('click', function(){
+    renderRecords();
+    $setup.classList.add('hidden');
+    document.getElementById('records').classList.remove('hidden');
+  });
+  document.getElementById('backBtn').addEventListener('click', function(){
+    document.getElementById('records').classList.add('hidden');
+    $setup.classList.remove('hidden');
+  });
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(!confirm('¿Borrar todo el historial y los jugadores guardados?')) return;
+    store={players:{}, history:[]};
+    saveStore(); renderSavedChips(); renderRecords();
+  });
+  renderSavedChips();
+  document.getElementById('exitBtn').addEventListener('click', function(){
+    clearTimers(); state='idle';
+    $game.classList.add('hidden');
+    // si ya se completó alguna partida, muestra los resultados en vez de perderlos
+    if(session.played>0){ showFinal(); }
+    else{ $setup.classList.remove('hidden'); }
+  });
+
+  // gancho de verificación (pruebas)
+  window.__agilizate = { DECK: DECK };
+})();
+</script>
+<!-- AGILIZATE:CONTENT-END -->
+</body>
+</html>
