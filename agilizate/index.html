@@ -78,6 +78,39 @@
   }
   .names input::placeholder{color:var(--text-dim)}
   .names input:focus{outline:2px solid var(--amarillo); outline-offset:1px}
+  .joinrow{display:flex; gap:8px; flex-wrap:wrap}
+  .joinrow input{
+    flex:1; min-width:100px; padding:10px 12px; border-radius:10px;
+    border:1.5px solid var(--line); background:rgba(255,246,227,.06); color:var(--text);
+    font-family:inherit; font-size:.95rem; -webkit-user-select:text; user-select:text;
+  }
+  .joinrow input::placeholder{color:var(--text-dim)}
+  .joinrow input:focus{outline:2px solid var(--amarillo); outline-offset:1px}
+  #joinCode{text-transform:uppercase; letter-spacing:.18em; font-weight:800; max-width:120px; flex:0 1 auto}
+  .netbtn{
+    padding:10px 18px; border-radius:999px; border:1.5px solid var(--azul);
+    background:var(--azul); color:#F4F8FF; font-weight:800; font-size:.95rem;
+  }
+  .netbtn:disabled{opacity:.5}
+
+  /* ---------- Sala en línea ---------- */
+  #lobby{align-items:center; justify-content:center; gap:16px; text-align:center; padding:22px}
+  #lobby .lobbylabel{font-size:.72rem; letter-spacing:.24em; text-transform:uppercase; color:var(--text-dim); font-weight:700}
+  #lobbyCode{
+    font-family:var(--display); font-weight:900; font-size:clamp(2.6rem,14vw,4.8rem);
+    letter-spacing:.2em; color:var(--amarillo); transform:skewX(-4deg); line-height:1;
+  }
+  .lobbylist{display:flex; flex-direction:column; gap:6px; color:var(--text-dim); font-size:1rem}
+  .lobbylist b{color:var(--text)}
+  #lobbyStartBtn{
+    padding:16px 34px; border-radius:14px; background:var(--rojo); color:#FFF6E3;
+    font-family:var(--display); font-weight:900; font-size:1.15rem; transform:skewX(-4deg);
+    box-shadow:0 7px 0 #9C221E;
+  }
+  #lobbyStartBtn:disabled{opacity:.5}
+  #lobbyExitBtn{color:var(--text-dim); text-decoration:underline; font-size:.85rem}
+  .zone.facedown .cardback{flex:1; min-height:0; width:auto; max-width:96%}
+  .zones.top .zone.facedown{transform:none} /* en línea cada quien ve su pantalla al derecho */
   #startBtn{
     margin-top:4px; padding:18px; border-radius:16px;
     background:var(--rojo); color:#FFF6E3;
@@ -209,6 +242,25 @@
     </header>
     <div class="panel">
       <div class="field">
+        <label>¿Cómo van a jugar?</label>
+        <div class="chips" id="netChips" role="group" aria-label="Modo de juego">
+          <button class="chip" data-v="local" aria-pressed="true">Un solo dispositivo</button>
+          <button class="chip" data-v="online" aria-pressed="false">En línea, cada quien el suyo</button>
+        </div>
+      </div>
+      <div class="field hidden" id="onlineField">
+        <label>Sala en línea</label>
+        <div class="joinrow">
+          <input id="netName" type="text" maxlength="14" placeholder="Tu nombre">
+          <button id="hostBtn" class="netbtn" type="button">Crear sala</button>
+        </div>
+        <div class="joinrow">
+          <input id="joinCode" type="text" maxlength="4" placeholder="CÓDIGO" autocapitalize="characters">
+          <button id="joinBtn" class="netbtn" type="button">Unirse</button>
+        </div>
+        <p class="dealhint" id="netStatus">Quien crea la sala comparte el código de 4 letras; los demás lo escriben en su celular para entrar. Las cartas y partidas las decide quien crea la sala.</p>
+      </div>
+      <div class="field" id="playersField">
         <label>Jugadores</label>
         <div class="chips" id="playersChips" role="group" aria-label="Número de jugadores"></div>
       </div>
@@ -226,7 +278,7 @@
           <button class="chip" data-v="7" aria-pressed="false">7 partidas</button>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="namesField">
         <label>Nombres de los jugadores</label>
         <div class="names" id="nameFields"></div>
       </div>
@@ -249,6 +301,17 @@
       <strong>Gana el primero en quedarse sin cartas.</strong> Pongan la tableta o el teléfono al centro de la
       mesa: las zonas de arriba se ven al derecho para los de enfrente.
     </p>
+  </section>
+
+  <!-- Sala de espera en línea -->
+  <section id="lobby" class="screen hidden">
+    <p class="lobbylabel">Código de la sala</p>
+    <div id="lobbyCode"></div>
+    <p class="dealhint">Compártelo con los demás para que se unan desde su celular.</p>
+    <div class="lobbylist" id="lobbyList"></div>
+    <button id="lobbyStartBtn" class="hidden" disabled>¡Empezar!</button>
+    <p class="dealhint hidden" id="lobbyWait">Esperando a que el anfitrión empiece la partida…</p>
+    <button id="lobbyExitBtn" type="button">Salir de la sala</button>
   </section>
 
   <!-- Mesa de juego -->
@@ -313,6 +376,7 @@
 
 </div>
 
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 (function(){
   'use strict';
@@ -787,6 +851,18 @@
 
   document.getElementById('startBtn').addEventListener('click', startSession);
   document.getElementById('againBtn').addEventListener('click', function(){
+    if(net.active){
+      if(!net.isHost) return;
+      if(osession.played < osession.planned){
+        $victory.classList.add('hidden');
+        hostStartRound();
+      }else{
+        var fin={t:'final', names:pnames(), wins:pwins(), history:osession.history};
+        broadcast(fin);
+        onlineShowFinal(fin);
+      }
+      return;
+    }
     if(session.played < session.planned){
       $victory.classList.add('hidden');
       startGame();
@@ -795,6 +871,7 @@
     }
   });
   document.getElementById('newSessionBtn').addEventListener('click', function(){
+    if(net.active){ netLeave(); return; }
     document.getElementById('final').classList.add('hidden');
     $setup.classList.remove('hidden'); state='idle';
   });
@@ -837,12 +914,461 @@
   });
   renderSavedChips();
   document.getElementById('exitBtn').addEventListener('click', function(){
+    if(net.active){ netLeave(); return; }
     clearTimers(); state='idle';
     $game.classList.add('hidden');
     // si ya se completó alguna partida, muestra los resultados en vez de perderlos
     if(session.played>0){ showFinal(); }
     else{ $setup.classList.remove('hidden'); }
   });
+
+  /* ================== MODO EN LÍNEA (WebRTC / PeerJS) ==================
+     El anfitrión crea la sala y es la autoridad: reparte, valida cada
+     jugada y avisa a todos. Cada dispositivo solo recibe SUS cartas. */
+  var net={active:false, isHost:false, peer:null, conn:null, myName:'', code:''};
+  var oplayers=[];                    // (anfitrión) {name, conn|null, pile, frozen, wins}
+  var ocenter=-1, oprev=-1, oroundActive=false;
+  var osession={planned:1, played:0, history:[]};
+  var gNames=[], gCounts=[], gCenter=-1, gMyIdx=0, gMyTop=-1, gMyCount=0, gFrozen=false;
+  var oz={el:null, svg:null, countEl:null};
+  var $lobby=document.getElementById('lobby');
+
+  function peerOpts(){
+    try{
+      var q=new URLSearchParams(location.search);
+      if(q.get('peerhost')){
+        return {host:q.get('peerhost'), port:+(q.get('peerport')||9000), path:'/',
+                key:'peerjs', secure:q.get('peersecure')==='1'};
+      }
+    }catch(e){}
+    return null;
+  }
+  function newPeer(id){
+    var o=peerOpts();
+    if(id!==undefined) return o? new Peer(id,o) : new Peer(id);
+    return o? new Peer(o) : new Peer();
+  }
+  function genCode(){
+    var abc='ABCDEFGHJKLMNPQRSTUVWXYZ23456789', s='';
+    for(var i=0;i<4;i++) s+=abc[Math.floor(Math.random()*abc.length)];
+    return s;
+  }
+  function setNetStatus(msg){ document.getElementById('netStatus').textContent=msg; }
+  function broadcast(msg){
+    oplayers.forEach(function(p){ if(p.conn){ try{p.conn.send(msg);}catch(e){} } });
+  }
+  function pnames(){ return oplayers.map(function(p){ return p.name; }); }
+  function pcounts(){ return oplayers.map(function(p){ return p.pile.length; }); }
+  function pwins(){ return oplayers.map(function(p){ return p.wins; }); }
+  function olPer(){
+    var mx=Math.floor(54/oplayers.length);
+    return cfg.cards==='max'? mx : Math.min(cfg.cards, mx);
+  }
+  function runCountdown(done){
+    state='countdown';
+    $count.classList.remove('hidden');
+    var steps=['3','2','1','¡YA!'];
+    steps.forEach(function(s,i){
+      later(function(){ $count.textContent=s; if(s==='¡YA!'){sfx.go();}else{sfx.count();} }, i*700);
+    });
+    later(function(){ $count.classList.add('hidden'); state='oplaying'; done(); }, steps.length*700);
+  }
+  function cardBackSVG(){
+    return '<circle cx="50" cy="50" r="48.5" fill="#20264A" stroke="#E9DCBE" stroke-width="2"/>'+
+           '<circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,246,227,.28)" stroke-width="1.5"/>'+
+           '<text x="50" y="50" font-size="30" text-anchor="middle" dominant-baseline="central">🃏</text>';
+  }
+
+  /* ----- selector de modo ----- */
+  var netChipsBox=document.getElementById('netChips');
+  netChipsBox.addEventListener('click', function(e){
+    var chip=e.target.closest('.chip'); if(!chip) return;
+    netChipsBox.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip?'true':'false'); });
+    var online=chip.dataset.v==='online';
+    document.getElementById('onlineField').classList.toggle('hidden', !online);
+    document.getElementById('playersField').classList.toggle('hidden', online);
+    document.getElementById('namesField').classList.toggle('hidden', online);
+    document.getElementById('startBtn').classList.toggle('hidden', online);
+    if(online){
+      document.getElementById('savedField').classList.add('hidden');
+      if(typeof Peer==='undefined'){
+        setNetStatus('El modo en línea necesita internet y la versión publicada del juego.');
+        document.getElementById('hostBtn').disabled=true;
+        document.getElementById('joinBtn').disabled=true;
+      }
+    }else{
+      renderSavedChips();
+    }
+  });
+
+  /* ----- pantalla de sala ----- */
+  function showLobby(){
+    state='olobby';
+    [$setup,$game,$victory,document.getElementById('final'),document.getElementById('records')]
+      .forEach(function(s){ s.classList.add('hidden'); });
+    $lobby.classList.remove('hidden');
+    document.getElementById('lobbyCode').textContent=net.code;
+    document.getElementById('lobbyStartBtn').classList.toggle('hidden', !net.isHost);
+    document.getElementById('lobbyWait').classList.toggle('hidden', net.isHost);
+  }
+  function renderLobby(names){
+    document.getElementById('lobbyList').innerHTML=names.map(function(n,i){
+      return '<span><b style="color:'+PLAYER_COLORS[i%6]+'">'+esc(n)+'</b>'+(i===0?' · anfitrión':'')+'</span>';
+    }).join('');
+    if(net.isHost){
+      var sb=document.getElementById('lobbyStartBtn');
+      sb.disabled = names.length<2;
+      sb.textContent = names.length<2 ? 'Esperando jugadores…' : '¡Empezar! ('+names.length+' jugadores)';
+    }
+  }
+  function netLeave(msg){
+    try{ if(net.peer) net.peer.destroy(); }catch(e){}
+    net={active:false, isHost:false, peer:null, conn:null, myName:'', code:''};
+    oplayers=[]; oroundActive=false; state='idle';
+    clearTimers();
+    [$lobby,$game,$victory,document.getElementById('final')].forEach(function(s){ s.classList.add('hidden'); });
+    $setup.classList.remove('hidden');
+    document.getElementById('againBtn').classList.remove('hidden');
+    if(msg) setNetStatus(msg);
+  }
+  document.getElementById('lobbyExitBtn').addEventListener('click', function(){ netLeave(); });
+
+  /* ----- anfitrión ----- */
+  function hostRoom(tries){
+    net.code=genCode();
+    try{ net.peer=newPeer('agz-'+net.code); }catch(e){ setNetStatus('No se pudo crear la sala.'); return; }
+    net.peer.on('open', function(){
+      net.active=true; net.isHost=true;
+      oplayers=[{name:net.myName, conn:null, pile:[], frozen:false, wins:0}];
+      showLobby(); renderLobby(pnames());
+    });
+    net.peer.on('connection', function(c){
+      c.on('data', function(m){ hostOnData(c,m); });
+      c.on('close', function(){ hostDropConn(c); });
+    });
+    net.peer.on('error', function(err){
+      var t=err && err.type;
+      if(t==='unavailable-id' && tries<3){
+        try{ net.peer.destroy(); }catch(e){}
+        hostRoom(tries+1);
+      }else if(!net.active){
+        setNetStatus('No se pudo crear la sala ('+(t||err)+'). Intenta de nuevo.');
+      }
+    });
+  }
+  document.getElementById('hostBtn').addEventListener('click', function(){
+    if(typeof Peer==='undefined' || net.active) return;
+    net.myName=(document.getElementById('netName').value.trim()||'Anfitrión').slice(0,14);
+    setNetStatus('Creando la sala…');
+    hostRoom(0);
+  });
+
+  function hostOnData(c,m){
+    if(!m || typeof m!=='object') return;
+    if(m.t==='hello'){
+      if(oplayers.length>=6 || state!=='olobby'){
+        try{ c.send({t:'full'}); }catch(e){}
+        setTimeout(function(){ try{c.close();}catch(e){} }, 300);
+        return;
+      }
+      var base=(String(m.name||'').trim()||'Jugador').slice(0,14), nm=base, k=2;
+      while(pnames().some(function(x){ return x.toLowerCase()===nm.toLowerCase(); })) nm=base.slice(0,12)+' '+(k++);
+      oplayers.push({name:nm, conn:c, pile:[], frozen:false, wins:0});
+      try{ c.send({t:'welcome', name:nm}); }catch(e){}
+      broadcast({t:'lobby', code:net.code, names:pnames()});
+      renderLobby(pnames());
+    }else if(m.t==='tap'){
+      for(var i=0;i<oplayers.length;i++){
+        if(oplayers[i].conn===c){ hostTap(oplayers[i], +m.sym); break; }
+      }
+    }
+  }
+  function hostDropConn(c){
+    var i=-1;
+    oplayers.forEach(function(x,ix){ if(x.conn===c) i=ix; });
+    if(i<0) return;
+    oplayers.splice(i,1);
+    if(state==='olobby'){
+      broadcast({t:'lobby', code:net.code, names:pnames()});
+      renderLobby(pnames());
+    }else if(oroundActive){
+      broadcast({t:'state', center:ocenter, names:pnames(), counts:pcounts(), by:null});
+      gNames=pnames(); gCounts=pcounts(); gMyIdx=0;
+      buildOnlineZones(); renderOnline();
+    }
+  }
+
+  document.getElementById('lobbyStartBtn').addEventListener('click', function(){
+    if(!net.isHost || oplayers.length<2) return;
+    osession={planned:cfg.games, played:0, history:[]};
+    oplayers.forEach(function(p){ p.wins=0; });
+    hostStartRound();
+  });
+
+  function hostStartRound(){
+    var order=shuffle(DECK.map(function(_,i){ return i; }));
+    var deal=order.slice(2);
+    ocenter=deal[0]; oprev=-1;
+    var per=olPer();
+    oplayers.forEach(function(p,i){
+      p.pile=deal.slice(1+i*per, 1+(i+1)*per);
+      p.frozen=false;
+    });
+    oroundActive=true;
+    oplayers.forEach(function(p){
+      if(p.conn){
+        try{
+          p.conn.send({t:'round', round:osession.played+1, planned:osession.planned,
+            names:pnames(), counts:pcounts(), center:ocenter, per:per,
+            top:p.pile[p.pile.length-1], count:p.pile.length});
+        }catch(e){}
+      }
+    });
+    gNames=pnames(); gCounts=pcounts(); gCenter=ocenter; gMyIdx=0;
+    gMyTop=oplayers[0].pile[oplayers[0].pile.length-1]; gMyCount=oplayers[0].pile.length; gFrozen=false;
+    onlineEnterGame(osession.played+1, osession.planned, per);
+  }
+
+  function hostTap(p, sym){
+    if(!oroundActive || p.frozen || !p.pile.length) return;
+    var top=p.pile[p.pile.length-1];
+    if(DECK[top].indexOf(sym)<0) return;
+    if(DECK[ocenter].indexOf(sym)>=0){
+      oprev=ocenter;
+      ocenter=p.pile.pop();
+      if(p.conn){
+        try{ p.conn.send({t:'ok', top:p.pile.length? p.pile[p.pile.length-1] : -1, count:p.pile.length}); }catch(e){}
+      }
+      broadcast({t:'state', center:ocenter, names:pnames(), counts:pcounts(), by:p.name});
+      gCenter=ocenter; gCounts=pcounts();
+      if(!p.conn){
+        gMyTop=p.pile.length? p.pile[p.pile.length-1] : -1;
+        gMyCount=p.pile.length;
+        sfx.good();
+      }
+      renderOnline();
+      if(!p.pile.length) hostEndRound(p);
+    }else if(oprev>=0 && DECK[oprev].indexOf(sym)>=0){
+      // llegó tarde: coincidía con la carta anterior, sin castigo
+    }else{
+      p.frozen=true;
+      setTimeout(function(){ p.frozen=false; }, 800);
+      if(p.conn){ try{ p.conn.send({t:'freeze'}); }catch(e){} }
+      else guestFreezeUI();
+    }
+  }
+
+  function hostEndRound(w){
+    oroundActive=false;
+    osession.played++;
+    w.wins++;
+    osession.history.push({n:osession.played, name:w.name});
+    var payload={t:'round-end', winner:w.name, played:osession.played, planned:osession.planned,
+                 names:pnames(), wins:pwins(), counts:pcounts(), per:olPer()};
+    broadcast(payload);
+    onlineShowVictory(payload);
+  }
+
+  /* ----- invitado ----- */
+  document.getElementById('joinBtn').addEventListener('click', function(){
+    if(typeof Peer==='undefined' || net.active) return;
+    var code=document.getElementById('joinCode').value.trim().toUpperCase();
+    var name=(document.getElementById('netName').value.trim()||'Invitado').slice(0,14);
+    if(code.length!==4){ setNetStatus('Escribe el código de 4 letras de la sala.'); return; }
+    net.myName=name; net.isHost=false; net.code=code;
+    setNetStatus('Conectando a la sala '+code+'…');
+    try{ net.peer=newPeer(); }catch(e){ setNetStatus('No se pudo conectar.'); return; }
+    net.peer.on('open', function(){
+      var c=net.peer.connect('agz-'+code, {reliable:true});
+      net.conn=c;
+      c.on('open', function(){ c.send({t:'hello', name:name}); });
+      c.on('data', guestOnData);
+      c.on('close', function(){ if(net.active) netLeave('Se cerró la sala o se perdió la conexión.'); });
+    });
+    net.peer.on('error', function(err){
+      if(!net.active) setNetStatus('No se encontró la sala '+code+'. Revisa el código.');
+    });
+  });
+
+  function guestOnData(m){
+    if(!m || typeof m!=='object') return;
+    switch(m.t){
+      case 'welcome':
+        net.myName=m.name; net.active=true;
+        break;
+      case 'full':
+        setNetStatus('La sala está llena o la partida ya empezó.');
+        try{ net.peer.destroy(); }catch(e){}
+        net.active=false;
+        break;
+      case 'lobby':
+        net.active=true;
+        showLobby(); renderLobby(m.names);
+        break;
+      case 'round':
+        gNames=m.names; gCounts=m.counts; gCenter=m.center;
+        gMyIdx=m.names.indexOf(net.myName);
+        gMyTop=m.top; gMyCount=m.count; gFrozen=false;
+        osession.played=m.round-1; osession.planned=m.planned;
+        onlineEnterGame(m.round, m.planned, m.per);
+        break;
+      case 'state':
+        if(m.names.length!==gNames.length){
+          gNames=m.names; gCounts=m.counts; gMyIdx=gNames.indexOf(net.myName);
+          gCenter=m.center; buildOnlineZones(); renderOnline();
+        }else{
+          gCounts=m.counts; gCenter=m.center; renderOnline();
+        }
+        if(m.by===net.myName) sfx.good();
+        break;
+      case 'ok':
+        gMyTop=m.top; gMyCount=m.count;
+        renderOnline();
+        break;
+      case 'freeze':
+        guestFreezeUI();
+        break;
+      case 'round-end':
+        onlineShowVictory(m);
+        break;
+      case 'final':
+        onlineShowFinal(m);
+        break;
+    }
+  }
+
+  /* ----- vista compartida del juego en línea ----- */
+  function buildOnlineZones(){
+    var top=document.getElementById('zonesTop'), bottom=document.getElementById('zonesBottom');
+    top.innerHTML=''; bottom.innerHTML='';
+    gNames.forEach(function(n,i){
+      if(i===gMyIdx) return;
+      var z=document.createElement('div');
+      z.className='zone facedown';
+      z.style.setProperty('--pc', PLAYER_COLORS[i%6]);
+      z.dataset.pi=i;
+      z.innerHTML='<div class="zhead"><span class="zname">'+esc(n)+'</span><span class="zcount"></span></div>'+
+                  '<svg class="cardback" viewBox="0 0 100 100" aria-hidden="true">'+cardBackSVG()+'</svg>';
+      top.appendChild(z);
+    });
+    top.style.display = gNames.length>1 ? '' : 'none';
+    var z=document.createElement('div');
+    z.className='zone';
+    z.style.setProperty('--pc', PLAYER_COLORS[gMyIdx%6]);
+    z.innerHTML='<div class="zhead"><span class="zname">'+esc(gNames[gMyIdx])+' (tú)</span><span class="zcount"></span></div>'+
+                '<svg class="playcard" viewBox="0 0 100 100" aria-label="Tu carta"></svg>';
+    oz.el=z; oz.svg=z.querySelector('svg'); oz.countEl=z.querySelector('.zcount');
+    oz.svg.addEventListener('pointerdown', function(e){
+      var g=e.target.closest('.sym'); if(!g) return;
+      e.preventDefault();
+      onlineTap(+g.getAttribute('data-sym'));
+    });
+    bottom.appendChild(z);
+  }
+  function renderOnline(){
+    if(gCenter>=0){ centerIdx=gCenter; renderCenter(); }
+    if(!oz.svg) return;
+    if(gMyCount>0){
+      oz.svg.innerHTML=cardSVG(gMyTop, true);
+      oz.countEl.textContent=gMyCount+(gMyCount===1?' carta':' cartas');
+    }else{
+      oz.svg.innerHTML='';
+      oz.countEl.textContent='¡Sin cartas!';
+    }
+    document.querySelectorAll('.zone.facedown').forEach(function(z){
+      var i=+z.dataset.pi, c=gCounts[i];
+      z.querySelector('.zcount').textContent = c===undefined ? '' : c+(c===1?' carta':' cartas');
+    });
+  }
+  function onlineEnterGame(round, planned, per){
+    [$lobby,$victory,document.getElementById('final')].forEach(function(s){ s.classList.add('hidden'); });
+    $game.classList.remove('hidden');
+    document.getElementById('deckLabel').textContent=
+      'Partida '+round+' de '+planned+' · '+per+' cartas · sala '+net.code;
+    buildOnlineZones();
+    $center.innerHTML='';
+    if(oz.svg) oz.svg.innerHTML='';
+    runCountdown(function(){ renderOnline(); });
+  }
+  function onlineTap(sym){
+    if(state!=='oplaying' || gFrozen || gMyCount===0) return;
+    if(net.isHost) hostTap(oplayers[0], sym);
+    else{ try{ net.conn.send({t:'tap', sym:sym}); }catch(e){} }
+  }
+  function guestFreezeUI(){
+    gFrozen=true;
+    if(oz.el){ oz.el.classList.add('frozen','shake'); }
+    sfx.bad();
+    setTimeout(function(){
+      gFrozen=false;
+      if(oz.el) oz.el.classList.remove('frozen','shake');
+    }, 800);
+  }
+
+  function registerOnlineResult(winnerName, names, per){
+    var parts=names.map(function(n){ return {name:n}; });
+    var w=null;
+    parts.forEach(function(p){ if(p.name===winnerName) w=p; });
+    if(w) registerResult(w, parts, per);
+  }
+
+  function onlineShowVictory(m){
+    state='oover';
+    registerOnlineResult(m.winner, m.names, m.per);
+    setTimeout(function(){
+      $game.classList.add('hidden'); $victory.classList.remove('hidden');
+      document.getElementById('winnerText').textContent='¡'+m.winner+' gana la partida '+m.played+'!';
+      document.getElementById('victory').style.setProperty('--wc', PLAYER_COLORS[Math.max(0,m.names.indexOf(m.winner))%6]);
+      document.getElementById('standings').innerHTML=m.names.map(function(n,i){
+        var left=m.counts[i];
+        return '<span><b style="color:'+PLAYER_COLORS[i%6]+'">'+esc(n)+'</b> — '+
+               (left===0?'sin cartas':'le quedaron '+left)+'</span>';
+      }).join('');
+      document.getElementById('sessionScore').innerHTML=
+        '<span>Marcador de la sesión ('+m.played+' de '+m.planned+' partidas):</span>'+
+        m.names.map(function(n,i){
+          var w=m.wins[i];
+          return '<span><b style="color:'+PLAYER_COLORS[i%6]+'">'+esc(n)+'</b> — '+w+(w===1?' victoria':' victorias')+'</span>';
+        }).join('') +
+        (net.isHost? '' : '<span>Esperando al anfitrión…</span>');
+      var ab=document.getElementById('againBtn');
+      if(net.isHost){
+        ab.classList.remove('hidden');
+        ab.textContent = m.played<m.planned ? 'Partida '+(m.played+1)+' de '+m.planned : 'Ver resultados finales';
+      }else{
+        ab.classList.add('hidden');
+      }
+      sfx.win();
+    }, 900);
+  }
+
+  function onlineShowFinal(m){
+    state='idle';
+    [$game,$victory,$lobby].forEach(function(s){ s.classList.add('hidden'); });
+    var $final=document.getElementById('final');
+    $final.classList.remove('hidden');
+    var best=Math.max.apply(null, m.wins);
+    var champs=m.names.filter(function(n,i){ return m.wins[i]===best && best>0; });
+    var champText=document.getElementById('champText');
+    if(champs.length===1){
+      champText.textContent='¡'+champs[0]+' es quien más ganó!';
+      $final.style.setProperty('--wc', PLAYER_COLORS[m.names.indexOf(champs[0])%6]);
+    }else if(champs.length>1){
+      champText.textContent='¡Empate entre '+champs.join(' y ')+'!';
+      $final.style.setProperty('--wc', 'var(--amarillo)');
+    }else{
+      champText.textContent='Sesión terminada';
+    }
+    document.getElementById('historyBody').innerHTML=m.history.map(function(h){
+      var ci=Math.max(0, m.names.indexOf(h.name))%6;
+      return '<tr><td>Partida '+h.n+'</td><td><b style="color:'+PLAYER_COLORS[ci]+'">'+esc(h.name)+'</b></td></tr>';
+    }).join('');
+    var order=m.names.map(function(n,i){ return {n:n, w:m.wins[i], i:i}; })
+                     .sort(function(a,b){ return b.w-a.w; });
+    document.getElementById('totalsBody').innerHTML=order.map(function(r){
+      return '<tr><td><b style="color:'+PLAYER_COLORS[r.i%6]+'">'+esc(r.n)+'</b></td><td class="num">'+r.w+'</td></tr>';
+    }).join('');
+  }
 
   // gancho de verificación (pruebas)
   window.__agilizate = { DECK: DECK };

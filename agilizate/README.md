@@ -23,9 +23,14 @@ Para jugar en grupo, pon un teléfono o tableta al centro de la mesa.
 
 En computadora cada jugador también puede usar su zona; en el celular o la tableta se toca directamente. Las zonas de arriba se muestran giradas 180° para los jugadores que están del otro lado de la mesa.
 
+## Modos de juego
+
+- **Un solo dispositivo**: pongan un teléfono o tableta al centro de la mesa; cada jugador tiene su zona.
+- **En línea, cada quien el suyo** 🆕: un jugador **crea la sala** y comparte el **código de 4 letras**; los demás lo escriben en su celular y se unen (hasta 6 jugadores). Cada quien ve **solo sus cartas en su propia pantalla** — los rivales aparecen boca abajo. La conexión es directa entre los dispositivos (WebRTC), sin cuentas ni servidores propios.
+
 ## Características
 
-- **2 a 6 jugadores** en el mismo dispositivo.
+- **2 a 6 jugadores** en el mismo dispositivo o en línea.
 - **Cartas por jugador configurables** (5, 7, 9 o el máximo que permita el mazo).
 - **Sesiones de varias partidas** (1, 3, 5 o 7) con marcador acumulado.
 - **Nombres personalizados** para cada jugador.
