@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Agilízate — Edición Figuras</title>
+</head>
+<body>
+<!-- AGILIZATE:CONTENT-START -->
+<style>
+  :root{
+    --felt-1:#171E3E; --felt-2:#0C1024;
+    --paper:#FFF6E3; --paper-edge:#E9DCBE; --ink:#1C1A2E;
+    --rojo:#E8413C; --azul:#2F6BFF; --amarillo:#FFC61A; --verde:#17B26A; --morado:#8B5CF6; --naranja:#FF7A1A;
+    --line:rgba(255,246,227,.16);
+    --text:#F4EFE2; --text-dim:rgba(244,239,226,.62);
+    --display:'Arial Black','Avenir Next Heavy','Helvetica Neue',Arial,sans-serif;
+    --body:system-ui,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--body); color:var(--text);
+    background:radial-gradient(120% 90% at 50% 30%, var(--felt-1), var(--felt-2) 78%);
+    min-height:100vh; min-height:100dvh; overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #stage{height:100vh; height:100dvh; display:flex; flex-direction:column}
+  .screen{flex:1; display:flex; flex-direction:column; min-height:0}
+  .hidden{display:none !important}
+  button{font-family:inherit; color:inherit; background:none; border:none; cursor:pointer}
+  button:focus-visible, .chip:focus-visible{outline:3px solid var(--amarillo); outline-offset:2px}
+  #cardWord, #countdown, .zone .zscore, #victory h2, #startBtn, #againBtn{font-weight:900}
+
+  /* ---------- Marca ---------- */
+  .brand{text-align:center; padding:clamp(18px,4vh,44px) 16px 6px}
+  .brand h1{
+    font-family:var(--display); font-weight:900;
+    font-size:clamp(2.4rem,9vw,4.6rem); line-height:.94; letter-spacing:-.02em;
+    transform:skewX(-6deg); text-wrap:balance;
+  }
+  .brand h1 .a1{color:var(--amarillo)} .brand h1 .a2{color:var(--rojo)}
+  .brand h1 .a3{color:var(--verde)}   .brand h1 .a4{color:var(--azul)}
+  .brand .sub{
+    margin-top:8px; font-size:.82rem; letter-spacing:.34em; text-transform:uppercase; color:var(--text-dim);
+  }
+
+  /* ---------- Configuración ---------- */
+  #setup{overflow-y:auto; align-items:center}
+  .panel{
+    width:min(560px,92vw); margin:18px auto; display:flex; flex-direction:column; gap:20px;
+    background:rgba(255,246,227,.05); border:1px solid var(--line); border-radius:20px;
+    padding:clamp(16px,3vw,28px);
+  }
+  .field{display:flex; flex-direction:column; gap:10px}
+  .field > label{
+    font-size:.72rem; letter-spacing:.22em; text-transform:uppercase; color:var(--text-dim); font-weight:700;
+  }
+  .chips{display:flex; flex-wrap:wrap; gap:8px}
+  .chip{
+    padding:10px 16px; border-radius:999px; border:1.5px solid var(--line);
+    font-size:.95rem; font-weight:700; color:var(--text-dim);
+    transition:transform .12s ease, background .12s ease, color .12s ease;
+  }
+  .chip[aria-pressed="true"]{
+    background:var(--amarillo); border-color:var(--amarillo); color:#241A00; transform:scale(1.04);
+  }
+  .modehint{font-size:.85rem; color:var(--text-dim); line-height:1.5}
+  #startBtn{
+    margin-top:4px; padding:18px; border-radius:16px;
+    background:var(--rojo); color:#FFF6E3;
+    font-family:var(--display); font-size:1.3rem; letter-spacing:.04em; transform:skewX(-4deg);
+    box-shadow:0 8px 0 #9C221E; transition:transform .1s ease, box-shadow .1s ease;
+  }
+  #startBtn:active{transform:skewX(-4deg) translateY(6px); box-shadow:0 2px 0 #9C221E}
+  .rules{
+    width:min(560px,92vw); margin:0 auto 28px; color:var(--text-dim);
+    font-size:.9rem; line-height:1.65;
+  }
+  .rules strong{color:var(--text)}
+
+  /* ---------- Mesa de juego ---------- */
+  #game{gap:8px; padding:8px}
+  .zones{display:flex; gap:8px; flex:0 0 clamp(96px,20vh,180px)}
+  .zone{
+    flex:1; border-radius:18px; border:2.5px solid var(--pc,#888);
+    background:color-mix(in srgb, var(--pc,#888) 14%, transparent);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    touch-action:none; position:relative; overflow:hidden;
+    transition:background .15s ease;
+  }
+  .zones.top .zone{transform:rotate(180deg)}
+  .zone .zname{font-weight:800; font-size:clamp(.85rem,2.4vw,1.1rem); color:var(--pc)}
+  .zone .zscore{
+    font-family:var(--display); font-size:clamp(1.7rem,6vw,3rem); line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .zone .zkey{
+    font-size:.68rem; color:var(--text-dim); letter-spacing:.08em;
+  }
+  .zone .zkey kbd{
+    border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-family:var(--body); font-weight:700;
+  }
+  .zone.locked{opacity:.35; filter:saturate(.4)}
+  .zone.win{background:color-mix(in srgb, var(--pc) 55%, transparent)}
+  .zone.shake{animation:shake .4s ease}
+  @keyframes shake{
+    0%,100%{translate:0 0} 20%{translate:-8px 0} 40%{translate:8px 0} 60%{translate:-6px 0} 80%{translate:6px 0}
+  }
+
+  #tableCenter{
+    flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    position:relative;
+  }
+  .card{
+    width:min(64vw, 320px); aspect-ratio:5/7;
+    max-height:calc(100% - 96px); min-height:0;
+    background:var(--paper); border-radius:20px;
+    border:2px solid var(--paper-edge);
+    box-shadow:0 14px 34px rgba(0,0,0,.45), inset 0 0 0 8px #fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6%;
+    padding:8%;
+    animation:deal .28s ease;
+  }
+  @keyframes deal{
+    from{transform:translateY(-14px) rotate(-3deg) scale(.94); opacity:0}
+    to{transform:none; opacity:1}
+  }
+  .card.claimed{animation:pop .5s ease}
+  @keyframes pop{
+    0%{transform:scale(1)} 35%{transform:scale(1.08) rotate(2deg)} 100%{transform:scale(1)}
+  }
+  .card svg{width:72%; height:auto; display:block}
+  #cardWord{
+    font-family:var(--display); font-size:clamp(1.2rem,5.4vw,2rem); letter-spacing:.02em;
+    transform:skewX(-4deg); text-align:center;
+  }
+  #timebar{
+    width:min(64vw,340px); height:6px; border-radius:99px; background:rgba(255,246,227,.14); overflow:hidden;
+  }
+  #timefill{display:block; height:100%; background:var(--amarillo); border-radius:99px; width:100%}
+  #timefill.run{animation:drain linear forwards}
+  @keyframes drain{from{width:100%} to{width:0%}}
+
+  #countdown{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-size:clamp(4rem,18vw,9rem); color:var(--amarillo);
+    text-shadow:0 6px 0 rgba(0,0,0,.35); z-index:5; pointer-events:none;
+  }
+  #hud{
+    display:flex; gap:14px; align-items:center; font-size:.8rem; color:var(--text-dim);
+  }
+  #hud .goal{font-variant-numeric:tabular-nums}
+  #hud button{
+    border:1px solid var(--line); border-radius:8px; padding:5px 12px; font-size:.78rem; color:var(--text-dim);
+  }
+  #hud button:hover{color:var(--text)}
+
+  /* ---------- Victoria ---------- */
+  #victory{align-items:center; justify-content:center; gap:22px; text-align:center; padding:20px}
+  #victory .trophy{font-size:clamp(3rem,12vw,5.5rem); line-height:1}
+  #victory h2{
+    font-family:var(--display); font-size:clamp(2rem,8vw,3.6rem); transform:skewX(-5deg);
+    color:var(--wc,var(--amarillo)); text-wrap:balance;
+  }
+  #victory .standings{display:flex; flex-direction:column; gap:6px; color:var(--text-dim); font-variant-numeric:tabular-nums}
+  #victory .standings b{color:var(--text)}
+  #againBtn{
+    padding:16px 34px; border-radius:14px; background:var(--verde); color:#04240F;
+    font-family:var(--display); font-size:1.15rem; transform:skewX(-4deg);
+    box-shadow:0 7px 0 #0B6B3E;
+  }
+  #againBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
+
+  @media (prefers-reduced-motion:reduce){
+    .card, .card.claimed, .zone.shake{animation:none}
+    #timefill.run{animation-duration:0s !important; width:0}
+  }
+</style>
+
+<div id="stage">
+
+  <!-- Pantalla de configuración -->
+  <section id="setup" class="screen">
+    <header class="brand">
+      <h1><span class="a1">AGI</span><span class="a2">LÍ</span><span class="a3">ZA</span><span class="a4">TE</span></h1>
+      <p class="sub">Edición figuras · 2 a 6 jugadores</p>
+    </header>
+    <div class="panel">
+      <div class="field">
+        <label>Jugadores</label>
+        <div class="chips" id="playersChips" role="group" aria-label="Número de jugadores"></div>
+      </div>
+      <div class="field">
+        <label>Modo</label>
+        <div class="chips" id="modeChips" role="group" aria-label="Modo de juego">
+          <button class="chip" data-v="clasico" aria-pressed="true">Clásico</button>
+          <button class="chip" data-v="experto" aria-pressed="false">Experto</button>
+        </div>
+        <p class="modehint" id="modeHint"></p>
+      </div>
+      <div class="field">
+        <label>Velocidad</label>
+        <div class="chips" id="speedChips" role="group" aria-label="Velocidad">
+          <button class="chip" data-v="2300" aria-pressed="false">Tranquilo</button>
+          <button class="chip" data-v="1650" aria-pressed="true">Normal</button>
+          <button class="chip" data-v="1100" aria-pressed="false">¡Ágil!</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Gana con</label>
+        <div class="chips" id="goalChips" role="group" aria-label="Puntos para ganar">
+          <button class="chip" data-v="6" aria-pressed="false">6 puntos</button>
+          <button class="chip" data-v="10" aria-pressed="true">10 puntos</button>
+          <button class="chip" data-v="16" aria-pressed="false">16 puntos</button>
+        </div>
+      </div>
+      <button id="startBtn">¡A JUGAR!</button>
+    </div>
+    <p class="rules">
+      <strong>Cómo se juega:</strong> las cartas se voltean solas al centro de la mesa. Cada carta trae una
+      <strong>figura dibujada</strong> y el <strong>nombre de una figura</strong> escrito abajo.
+      Cuando el nombre y el dibujo <strong>coinciden</strong>, ¡golpea tu zona antes que nadie!
+      Acertar da <strong>+2 puntos</strong>; equivocarte resta <strong>1 punto</strong> y te congela hasta la
+      siguiente carta. En una tableta o teléfono pónganlo al centro de la mesa: los de enfrente ven su zona al derecho.
+      En computadora, cada jugador usa su tecla.
+    </p>
+  </section>
+
+  <!-- Mesa de juego -->
+  <section id="game" class="screen hidden">
+    <div class="zones top" id="zonesTop"></div>
+    <div id="tableCenter">
+      <div id="countdown" class="hidden"></div>
+      <div class="card" id="card">
+        <svg id="figSvg" viewBox="0 0 100 100" aria-hidden="true"></svg>
+        <div id="cardWord"></div>
+      </div>
+      <div id="timebar"><i id="timefill"></i></div>
+      <div id="hud">
+        <span class="goal" id="goalLabel"></span>
+        <button id="muteBtn" type="button">🔊 Sonido</button>
+        <button id="exitBtn" type="button">Salir</button>
+      </div>
+    </div>
+    <div class="zones bottom" id="zonesBottom"></div>
+  </section>
+
+  <!-- Victoria -->
+  <section id="victory" class="screen hidden">
+    <div class="trophy">🏆</div>
+    <h2 id="winnerText"></h2>
+    <div class="standings" id="standings"></div>
+    <button id="againBtn">Otra ronda</button>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- Datos del juego ---------- */
+  var FIGURES = [
+    {id:'circulo',  name:'CÍRCULO',  svg:'<circle cx="50" cy="50" r="38"/>'},
+    {id:'cuadrado', name:'CUADRADO', svg:'<rect x="13" y="13" width="74" height="74" rx="10"/>'},
+    {id:'triangulo',name:'TRIÁNGULO',svg:'<path d="M50 9 L93 86 L7 86 Z"/>'},
+    {id:'estrella', name:'ESTRELLA', svg:'<path d="M50 5 L61 37 L95 38 L68 59 L78 93 L50 73 L22 93 L32 59 L5 38 L39 37 Z"/>'},
+    {id:'corazon',  name:'CORAZÓN',  svg:'<path d="M50 89 C21 63 8 45 8 30 C8 16 19 7 31 7 C40 7 46 12 50 20 C54 12 60 7 69 7 C81 7 92 16 92 30 C92 45 79 63 50 89 Z"/>'},
+    {id:'luna',     name:'LUNA',     svg:'<path d="M63 6 A45 45 0 1 0 63 94 A37 37 0 1 1 63 6 Z"/>'}
+  ];
+  var COLORS = [
+    {id:'rojo',    hex:'#E8413C'},
+    {id:'azul',    hex:'#2F6BFF'},
+    {id:'amarillo',hex:'#E8AE00'},
+    {id:'verde',   hex:'#17B26A'},
+    {id:'morado',  hex:'#8B5CF6'}
+  ];
+  var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
+  var PLAYER_KEYS   = ['a','l','q','p','c','m'];
+  var MATCH_RATE = 0.3;
+
+  /* ---------- Configuración ---------- */
+  var cfg = {players:2, mode:'clasico', speed:1650, goal:10};
+
+  var MODE_HINTS = {
+    clasico:'Golpea cuando la palabra dice la figura que está dibujada. El color es puro engaño.',
+    experto:'Golpea solo si la palabra dice la figura dibujada Y está escrita del mismo color que el dibujo. Doble trampa.'
+  };
+
+  function bindChips(containerId, onPick){
+    var box = document.getElementById(containerId);
+    box.addEventListener('click', function(e){
+      var chip = e.target.closest('.chip');
+      if(!chip) return;
+      box.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+      onPick(chip.dataset.v);
+    });
+  }
+
+  var playersBox = document.getElementById('playersChips');
+  for(var n=2; n<=6; n++){
+    var b = document.createElement('button');
+    b.className='chip'; b.dataset.v=n; b.textContent=n+' jugadores';
+    b.setAttribute('aria-pressed', n===2 ? 'true':'false');
+    playersBox.appendChild(b);
+  }
+  bindChips('playersChips', function(v){ cfg.players=+v; });
+  bindChips('modeChips',    function(v){ cfg.mode=v; document.getElementById('modeHint').textContent=MODE_HINTS[v]; });
+  bindChips('speedChips',   function(v){ cfg.speed=+v; });
+  bindChips('goalChips',    function(v){ cfg.goal=+v; });
+  document.getElementById('modeHint').textContent = MODE_HINTS.clasico;
+
+  /* ---------- Sonido (WebAudio, sin archivos) ---------- */
+  var audioCtx=null, muted=false;
+  function beep(freq, dur, type, when, gain){
+    if(muted) return;
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      var t = audioCtx.currentTime + (when||0);
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = type||'square'; o.frequency.value = freq;
+      g.gain.setValueAtTime(gain||0.08, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t); o.stop(t+dur+0.02);
+    }catch(e){}
+  }
+  var sfx = {
+    flip:  function(){ beep(660,.05,'triangle',0,.04); },
+    good:  function(){ beep(523,.09,'square'); beep(784,.12,'square',.09); beep(1046,.18,'square',.2); },
+    bad:   function(){ beep(160,.25,'sawtooth',0,.09); },
+    count: function(){ beep(440,.08,'triangle',0,.06); },
+    go:    function(){ beep(880,.25,'triangle',0,.08); },
+    win:   function(){ [523,659,784,1046].forEach(function(f,i){ beep(f,.16,'square',i*.12); }); }
+  };
+  document.getElementById('muteBtn').addEventListener('click', function(){
+    muted = !muted;
+    this.textContent = muted ? '🔇 Sin sonido' : '🔊 Sonido';
+  });
+
+  /* ---------- Estado ---------- */
+  var state='idle';          // idle | countdown | playing | claimed | over
+  var players=[];            // {i, name, color, key, score, locked, el, scoreEl}
+  var current=null;          // {figure, figColor, word, wordColor, isMatch}
+  var flipTimer=null, pendingTimers=[];
+
+  var $game=document.getElementById('game'), $setup=document.getElementById('setup'),
+      $victory=document.getElementById('victory'),
+      $card=document.getElementById('card'), $fig=document.getElementById('figSvg'),
+      $word=document.getElementById('cardWord'), $fill=document.getElementById('timefill'),
+      $count=document.getElementById('countdown');
+
+  function later(fn, ms){ pendingTimers.push(setTimeout(fn, ms)); }
+  function clearTimers(){
+    if(flipTimer) clearTimeout(flipTimer);
+    pendingTimers.forEach(clearTimeout);
+    flipTimer=null; pendingTimers=[];
+  }
+  function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function randOther(arr, not){
+    var pick; do{ pick = rand(arr); }while(pick===not);
+    return pick;
+  }
+
+  /* ---------- Zonas de jugadores ---------- */
+  function buildZones(){
+    players = [];
+    var top=document.getElementById('zonesTop'), bottom=document.getElementById('zonesBottom');
+    top.innerHTML=''; bottom.innerHTML='';
+    var nBottom = Math.ceil(cfg.players/2);
+    for(var i=0;i<cfg.players;i++){
+      var p = {i:i, name:'Jugador '+(i+1), color:PLAYER_COLORS[i], key:PLAYER_KEYS[i], score:0, locked:false};
+      var z = document.createElement('button');
+      z.className='zone'; z.type='button';
+      z.style.setProperty('--pc', p.color);
+      z.innerHTML = '<span class="zname">'+p.name+'</span>'+
+                    '<span class="zscore">0</span>'+
+                    '<span class="zkey">tecla <kbd>'+p.key.toUpperCase()+'</kbd></span>';
+      p.el=z; p.scoreEl=z.querySelector('.zscore');
+      (i<nBottom ? bottom : top).appendChild(z);
+      (function(pp){
+        z.addEventListener('pointerdown', function(e){ e.preventDefault(); slap(pp); });
+      })(p);
+      players.push(p);
+    }
+    top.style.display = cfg.players>nBottom ? '' : 'none';
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(state!=='playing' && state!=='claimed') return;
+    if(e.repeat) return;
+    var k = e.key.toLowerCase();
+    for(var i=0;i<players.length;i++){
+      if(players[i].key===k){ slap(players[i]); return; }
+    }
+  });
+
+  /* ---------- Cartas ---------- */
+  function makeCard(){
+    var figure = rand(FIGURES);
+    var figColor = rand(COLORS);
+    var word, wordColor, isMatch = Math.random() < MATCH_RATE;
+    if(cfg.mode==='clasico'){
+      word = isMatch ? figure : randOther(FIGURES, figure);
+      wordColor = rand(COLORS);
+    }else{
+      if(isMatch){ word=figure; wordColor=figColor; }
+      else{
+        var r = Math.random();
+        if(r<0.45){ word=figure; wordColor=randOther(COLORS, figColor); }        // figura correcta, color traidor
+        else if(r<0.75){ word=randOther(FIGURES, figure); wordColor=figColor; }  // color correcto, figura traidora
+        else{ word=randOther(FIGURES, figure); wordColor=randOther(COLORS, figColor); }
+      }
+    }
+    return {figure:figure, figColor:figColor, word:word, wordColor:wordColor, isMatch:isMatch};
+  }
+
+  function flipCard(){
+    state='playing';
+    current = makeCard();
+    players.forEach(function(p){ p.locked=false; p.el.classList.remove('locked','win','shake'); });
+
+    $fig.innerHTML = current.figure.svg;
+    $fig.firstChild.setAttribute('fill', current.figColor.hex);
+    $word.textContent = current.word.name;
+    $word.style.color = current.wordColor.hex;
+
+    $card.classList.remove('claimed');
+    $card.style.animation='none'; void $card.offsetWidth; $card.style.animation='';
+
+    $fill.classList.remove('run'); void $fill.offsetWidth;
+    $fill.style.animationDuration = cfg.speed+'ms';
+    $fill.classList.add('run');
+
+    sfx.flip();
+    flipTimer = setTimeout(flipCard, cfg.speed);
+  }
+
+  /* ---------- Golpes ---------- */
+  function slap(p){
+    if(state!=='playing' || p.locked) return;
+    if(current && current.isMatch){
+      state='claimed';
+      if(flipTimer) clearTimeout(flipTimer);
+      $fill.classList.remove('run');
+      p.score += 2;
+      p.scoreEl.textContent = p.score;
+      p.el.classList.add('win');
+      $card.classList.add('claimed');
+      sfx.good();
+      if(p.score >= cfg.goal){
+        later(function(){ endGame(p); }, 900);
+      }else{
+        later(flipCard, 900);
+      }
+    }else{
+      p.score = Math.max(0, p.score-1);
+      p.scoreEl.textContent = p.score;
+      p.locked = true;
+      p.el.classList.add('locked','shake');
+      sfx.bad();
+    }
+  }
+
+  /* ---------- Flujo de partida ---------- */
+  function startGame(){
+    clearTimers();
+    buildZones();
+    document.getElementById('goalLabel').textContent = 'Meta: '+cfg.goal+' pts · '+(cfg.mode==='experto'?'Experto':'Clásico');
+    $setup.classList.add('hidden'); $victory.classList.add('hidden'); $game.classList.remove('hidden');
+    $fig.innerHTML=''; $word.textContent=''; $fill.classList.remove('run');
+    state='countdown';
+    $count.classList.remove('hidden');
+    var steps=['3','2','1','¡YA!'];
+    steps.forEach(function(s,i){
+      later(function(){
+        $count.textContent=s;
+        if(s==='¡YA!'){ sfx.go(); } else { sfx.count(); }
+      }, i*700);
+    });
+    later(function(){ $count.classList.add('hidden'); flipCard(); }, steps.length*700);
+  }
+
+  function endGame(winner){
+    clearTimers();
+    state='over';
+    $game.classList.add('hidden');
+    $victory.classList.remove('hidden');
+    var wt = document.getElementById('winnerText');
+    wt.textContent = '¡'+winner.name+' gana!';
+    document.getElementById('victory').style.setProperty('--wc', winner.color);
+    var sorted = players.slice().sort(function(a,b){ return b.score-a.score; });
+    document.getElementById('standings').innerHTML = sorted.map(function(p){
+      return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+p.score+' pts</span>';
+    }).join('');
+    sfx.win();
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('againBtn').addEventListener('click', function(){
+    $victory.classList.add('hidden'); $setup.classList.remove('hidden'); state='idle';
+  });
+  document.getElementById('exitBtn').addEventListener('click', function(){
+    clearTimers(); state='idle';
+    $game.classList.add('hidden'); $setup.classList.remove('hidden');
+  });
+})();
+</script>
+<!-- AGILIZATE:CONTENT-END -->
+</body>
+</html>
