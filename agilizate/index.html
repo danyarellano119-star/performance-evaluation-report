@@ -159,20 +159,28 @@
   }
   #victory .standings{display:flex; flex-direction:column; gap:6px; color:var(--text-dim); font-variant-numeric:tabular-nums}
   #victory .standings b{color:var(--text)}
-  #againBtn, #newSessionBtn{
+  #againBtn, #newSessionBtn, #backBtn{
     padding:16px 34px; border-radius:14px; background:var(--verde); color:#04240F;
     font-family:var(--display); font-weight:900; font-size:1.15rem; transform:skewX(-4deg);
     box-shadow:0 7px 0 #0B6B3E;
   }
-  #againBtn:active, #newSessionBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
+  #againBtn:active, #newSessionBtn:active, #backBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
 
-  /* ---------- Resultados de la sesión ---------- */
-  #final{align-items:center; justify-content:flex-start; gap:20px; padding:28px 20px; overflow-y:auto; text-align:center}
-  #final .trophy{font-size:clamp(2.6rem,10vw,4.5rem); line-height:1}
-  #final h2{
+  /* ---------- Resultados de la sesión e historial ---------- */
+  #final, #records{align-items:center; justify-content:flex-start; gap:20px; padding:28px 20px; overflow-y:auto; text-align:center}
+  #final .trophy, #records .trophy{font-size:clamp(2.6rem,10vw,4.5rem); line-height:1}
+  #final h2, #records h2{
     font-family:var(--display); font-weight:900; font-size:clamp(1.5rem,6.5vw,2.7rem);
     transform:skewX(-5deg); color:var(--wc,var(--amarillo)); text-wrap:balance;
   }
+  .ghost{
+    padding:12px; border-radius:12px; border:1.5px solid var(--line);
+    font-weight:700; color:var(--text-dim); font-size:.95rem;
+  }
+  .ghost:hover{color:var(--text)}
+  .danger{color:var(--rojo); font-size:.85rem; text-decoration:underline; padding:6px}
+  .subnote{font-size:.78rem; color:var(--text-dim)}
+  .chip .x{opacity:.55; margin-left:7px; font-weight:900}
   .results{border-collapse:collapse; width:min(440px,92vw)}
   .results caption{
     text-align:left; font-size:.7rem; letter-spacing:.22em; text-transform:uppercase;
@@ -222,7 +230,12 @@
         <label>Nombres de los jugadores</label>
         <div class="names" id="nameFields"></div>
       </div>
+      <div class="field hidden" id="savedField">
+        <label>Jugadores guardados — toca uno para usarlo</label>
+        <div class="chips" id="savedChips"></div>
+      </div>
       <button id="startBtn">¡A JUGAR!</button>
+      <button id="recordsBtn" class="ghost" type="button">📜 Historial de partidas</button>
     </div>
     <p class="rules">
       <strong>Cómo se juega:</strong> el mazo tiene <strong>55 cartas</strong> y cada carta trae 8 objetos
@@ -277,6 +290,25 @@
       <tbody id="totalsBody"></tbody>
     </table>
     <button id="newSessionBtn">Nueva sesión</button>
+  </section>
+
+  <!-- Historial guardado -->
+  <section id="records" class="screen hidden">
+    <div class="trophy">📜</div>
+    <h2>Historial</h2>
+    <table class="results">
+      <caption>Jugadores guardados</caption>
+      <thead><tr><th>Jugador</th><th>Partidas</th><th>Victorias</th></tr></thead>
+      <tbody id="recPlayers"></tbody>
+    </table>
+    <table class="results">
+      <caption>Últimas partidas</caption>
+      <thead><tr><th>Fecha</th><th>Jugadores</th><th>Ganador</th></tr></thead>
+      <tbody id="recGames"></tbody>
+    </table>
+    <p class="subnote">El historial se guarda en este dispositivo y navegador.</p>
+    <button id="backBtn">Volver</button>
+    <button id="clearBtn" class="danger" type="button">Borrar historial</button>
   </section>
 
 </div>
@@ -397,10 +429,88 @@
     this.textContent = muted ? '🔇 Sin sonido' : '🔊 Sonido';
   });
 
+  /* ---------- Memoria en este dispositivo (usuarios e historial) ---------- */
+  var STORE_KEY='agilizate.v1';
+  function loadStore(){
+    try{
+      var s=JSON.parse(localStorage.getItem(STORE_KEY));
+      if(s && s.players && s.history) return s;
+    }catch(e){}
+    return {players:{}, history:[]};
+  }
+  var store=loadStore();
+  function saveStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){} }
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function isDefaultName(n){ return /^jugador \d+$/i.test(n); }
+
+  // registra una partida terminada: historial + estadísticas de usuarios con nombre
+  function registerResult(winner, participants, cardsDealt){
+    store.history.unshift({
+      t:Date.now(),
+      players:participants.map(function(p){ return p.name; }),
+      winner:winner.name,
+      cards:cardsDealt
+    });
+    if(store.history.length>200) store.history.length=200;
+    participants.forEach(function(p){
+      if(isDefaultName(p.name)) return;
+      var k=p.name.toLowerCase();
+      var u=store.players[k] || {name:p.name, games:0, wins:0, last:0};
+      u.games++; if(p===winner) u.wins++;
+      u.last=Date.now();
+      store.players[k]=u;
+    });
+    saveStore();
+    renderSavedChips();
+  }
+
   /* ---------- Configuración ---------- */
   var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
   var cfg = {players:2, cards:9, games:3}; // cards: número o 'max'
   var names = []; // nombres escritos por los jugadores
+
+  function savedUsers(){
+    return Object.keys(store.players).map(function(k){ return store.players[k]; })
+      .sort(function(a,b){ return (b.last||0)-(a.last||0); });
+  }
+  function renderSavedChips(){
+    var field=document.getElementById('savedField');
+    var box=document.getElementById('savedChips');
+    var users=savedUsers();
+    if(!users.length){ field.classList.add('hidden'); box.innerHTML=''; return; }
+    field.classList.remove('hidden');
+    box.innerHTML=users.map(function(u){
+      return '<button class="chip" type="button" data-name="'+esc(u.name)+'">'+esc(u.name)+
+             '<span class="x" data-del="'+esc(u.name.toLowerCase())+'" title="Olvidar a '+esc(u.name)+'">×</span></button>';
+    }).join('');
+  }
+  document.getElementById('savedChips').addEventListener('click', function(e){
+    var del=e.target.closest('[data-del]');
+    if(del){
+      delete store.players[del.getAttribute('data-del')];
+      saveStore(); renderSavedChips();
+      return;
+    }
+    var chip=e.target.closest('.chip');
+    if(!chip) return;
+    var name=chip.getAttribute('data-name');
+    var inputs=document.querySelectorAll('#nameFields input');
+    var i, taken=false;
+    for(i=0;i<inputs.length;i++){
+      if(inputs[i].value.trim().toLowerCase()===name.toLowerCase()) taken=true;
+    }
+    if(taken) return; // ese jugador ya está en la mesa
+    for(i=0;i<inputs.length;i++){
+      if(!inputs[i].value.trim()){
+        inputs[i].value=name; names[i]=name;
+        break;
+      }
+    }
+  });
 
   function maxPer(P){ return Math.floor(54/P); }
   function perPlayer(P){
@@ -506,9 +616,9 @@
       var z=document.createElement('div');
       z.className='zone';
       z.style.setProperty('--pc', p.color);
-      z.innerHTML='<div class="zhead"><span class="zname">'+p.name+'</span>'+
+      z.innerHTML='<div class="zhead"><span class="zname">'+esc(p.name)+'</span>'+
                   '<span class="zcount"></span></div>'+
-                  '<svg class="playcard" viewBox="0 0 100 100" aria-label="Carta de '+p.name+'"></svg>';
+                  '<svg class="playcard" viewBox="0 0 100 100" aria-label="Carta de '+esc(p.name)+'"></svg>';
       p.el=z; p.svg=z.querySelector('svg'); p.countEl=z.querySelector('.zcount');
       (i<nBottom ? bottom : top).appendChild(z);
       attachTap(p);
@@ -610,6 +720,7 @@
     session.played++;
     session.wins[winner.i]++;
     session.history.push({n:session.played, name:winner.name, color:winner.color});
+    registerResult(winner, players, perPlayer(cfg.players));
     later(function(){
       $game.classList.add('hidden');
       $victory.classList.remove('hidden');
@@ -619,14 +730,14 @@
       var sorted=players.slice().sort(function(a,b){ return a.pile.length-b.pile.length; });
       document.getElementById('standings').innerHTML=sorted.map(function(p){
         var left=p.pile.length;
-        return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+
+        return '<span><b style="color:'+p.color+'">'+esc(p.name)+'</b> — '+
                (left===0 ? 'sin cartas' : 'le quedaron '+left)+'</span>';
       }).join('');
       document.getElementById('sessionScore').innerHTML=
         '<span>Marcador de la sesión ('+session.played+' de '+session.planned+' partidas):</span>'+
         players.map(function(p){
           var w=session.wins[p.i];
-          return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+
+          return '<span><b style="color:'+p.color+'">'+esc(p.name)+'</b> — '+
                  w+(w===1?' victoria':' victorias')+'</span>';
         }).join('');
       document.getElementById('againBtn').textContent =
@@ -658,12 +769,12 @@
     document.getElementById('historyBody').innerHTML =
       session.history.length
         ? session.history.map(function(h){
-            return '<tr><td>Partida '+h.n+'</td><td><b style="color:'+h.color+'">'+h.name+'</b></td></tr>';
+            return '<tr><td>Partida '+h.n+'</td><td><b style="color:'+h.color+'">'+esc(h.name)+'</b></td></tr>';
           }).join('')
         : '<tr><td colspan="2">No se completó ninguna partida.</td></tr>';
     var order=players.slice().sort(function(a,b){ return session.wins[b.i]-session.wins[a.i]; });
     document.getElementById('totalsBody').innerHTML = order.map(function(p){
-      return '<tr><td><b style="color:'+p.color+'">'+p.name+'</b></td>'+
+      return '<tr><td><b style="color:'+p.color+'">'+esc(p.name)+'</b></td>'+
              '<td class="num">'+session.wins[p.i]+'</td></tr>';
     }).join('');
   }
@@ -687,6 +798,44 @@
     document.getElementById('final').classList.add('hidden');
     $setup.classList.remove('hidden'); state='idle';
   });
+
+  /* ---------- Pantalla de historial ---------- */
+  function fmtDate(t){
+    try{
+      return new Date(t).toLocaleString('es-MX', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'});
+    }catch(e){ return new Date(t).toLocaleString(); }
+  }
+  function renderRecords(){
+    var users=savedUsers().slice().sort(function(a,b){ return b.wins-a.wins || b.games-a.games; });
+    document.getElementById('recPlayers').innerHTML = users.length
+      ? users.map(function(u){
+          return '<tr><td><b>'+esc(u.name)+'</b></td>'+
+                 '<td class="num">'+u.games+'</td><td class="num">'+u.wins+'</td></tr>';
+        }).join('')
+      : '<tr><td colspan="3">Aún no hay jugadores guardados. Escribe tu nombre antes de jugar.</td></tr>';
+    document.getElementById('recGames').innerHTML = store.history.length
+      ? store.history.slice(0,20).map(function(h){
+          return '<tr><td>'+fmtDate(h.t)+'</td>'+
+                 '<td>'+h.players.map(esc).join(', ')+'</td>'+
+                 '<td><b>'+esc(h.winner)+'</b></td></tr>';
+        }).join('')
+      : '<tr><td colspan="3">Aún no se ha jugado ninguna partida.</td></tr>';
+  }
+  document.getElementById('recordsBtn').addEventListener('click', function(){
+    renderRecords();
+    $setup.classList.add('hidden');
+    document.getElementById('records').classList.remove('hidden');
+  });
+  document.getElementById('backBtn').addEventListener('click', function(){
+    document.getElementById('records').classList.add('hidden');
+    $setup.classList.remove('hidden');
+  });
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(!confirm('¿Borrar todo el historial y los jugadores guardados?')) return;
+    store={players:{}, history:[]};
+    saveStore(); renderSavedChips(); renderRecords();
+  });
+  renderSavedChips();
   document.getElementById('exitBtn').addEventListener('click', function(){
     clearTimers(); state='idle';
     $game.classList.add('hidden');
