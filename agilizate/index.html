@@ -178,9 +178,10 @@
       <button id="startBtn">¡A JUGAR!</button>
     </div>
     <p class="rules">
-      <strong>Cómo se juega:</strong> el mazo tiene <strong>55 cartas</strong> y cada carta trae 8 figuras.
-      Entre <strong>cualquier</strong> par de cartas siempre hay <strong>exactamente una figura igual</strong>
-      (misma forma y mismo color). Se reparten las cartas y la que sobra abre el centro de la mesa.
+      <strong>Cómo se juega:</strong> el mazo tiene <strong>55 cartas</strong> y cada carta trae 8 objetos
+      de la vida diaria (aviones, carros, celulares, comida…). Entre <strong>cualquier</strong> par de cartas
+      siempre hay <strong>exactamente un objeto igual</strong>. Se reparten las cartas y la que sobra abre el
+      centro de la mesa.
       Cada jugador ve solo la <strong>carta de encima de su pila</strong> — las demás quedan boca abajo,
       nadie sabe qué cartas te quedan. Todos juegan <strong>al mismo tiempo</strong>: encuentra la figura que tu
       carta comparte con la del centro y <strong>tócala en tu carta</strong>. Si aciertas, tu carta cae al centro
@@ -219,36 +220,15 @@
 (function(){
   'use strict';
 
-  /* ---------- Símbolos: 12 formas × 5 colores = 60, se usan 57 ---------- */
-  var SHAPES = [
-    {id:'circulo',  el:'<circle r="8.6" fill="currentColor"/>'},
-    {id:'cuadrado', el:'<rect x="-7.6" y="-7.6" width="15.2" height="15.2" rx="2" fill="currentColor"/>'},
-    {id:'triangulo',el:'<path d="M0 -8.8 L8.8 7.6 L-8.8 7.6 Z" fill="currentColor"/>'},
-    {id:'estrella', el:'<path d="M0 -9.6 L2.5 -3.1 L9.4 -2.9 L4 1.5 L6 8.6 L0 4.4 L-6 8.6 L-4 1.5 L-9.4 -2.9 L-2.5 -3.1 Z" fill="currentColor"/>'},
-    {id:'corazon',  el:'<path d="M0 8.2 C-6.3 2.9 -8.7 -0.5 -8.7 -3.4 C-8.7 -6.3 -6.5 -8.2 -4.1 -8.2 C-2.1 -8.2 -0.8 -7.1 0 -5.6 C0.8 -7.1 2.1 -8.2 4.1 -8.2 C6.5 -8.2 8.7 -6.3 8.7 -3.4 C8.7 -0.5 6.3 2.9 0 8.2 Z" fill="currentColor"/>'},
-    {id:'luna',     el:'<path d="M2.7 -8.7 A9 9 0 1 0 2.7 8.7 A7.2 7.2 0 1 1 2.7 -8.7 Z" fill="currentColor"/>'},
-    {id:'rombo',    el:'<path d="M0 -9 L7.6 0 L0 9 L-7.6 0 Z" fill="currentColor"/>'},
-    {id:'cruz',     el:'<path d="M-2.9 -8.8 H2.9 V-2.9 H8.8 V2.9 H2.9 V8.8 H-2.9 V2.9 H-8.8 V-2.9 H-2.9 Z" fill="currentColor"/>'},
-    {id:'rayo',     el:'<path d="M2 -9.6 L-6 0.8 L-1.2 0.8 L-2 9.6 L6 -0.8 L1.2 -0.8 Z" fill="currentColor"/>'},
-    {id:'gota',     el:'<path d="M0 -9 C3.8 -3.4 6.6 -0.2 6.6 3 A6.6 6.6 0 1 1 -6.6 3 C-6.6 -0.2 -3.8 -3.4 0 -9 Z" fill="currentColor"/>'},
-    {id:'hexagono', el:'<path d="M0 -8.8 L7.6 -4.4 L7.6 4.4 L0 8.8 L-7.6 4.4 L-7.6 -4.4 Z" fill="currentColor"/>'},
-    {id:'anillo',   el:'<circle r="6.4" fill="none" stroke="currentColor" stroke-width="4.2"/>'}
-  ];
-  var INKS = ['#E8413C','#2F6BFF','#E8AE00','#17B26A','#8B5CF6'];
-
-  // Símbolo s (0..56) → forma y color fijos, con una permutación sembrada para que
-  // ninguna carta salga con todas sus figuras del mismo color
-  var PAIRS = (function(){
-    var arr=[], sh, c;
-    for(sh=0; sh<12; sh++) for(c=0; c<5; c++) arr.push([sh,c]);
-    var rnd = mulberry32(20260706);
-    for(var i=arr.length-1; i>0; i--){
-      var j=Math.floor(rnd()*(i+1)), t=arr[i]; arr[i]=arr[j]; arr[j]=t;
-    }
-    return arr; // 60 combinaciones únicas; se usan las primeras 57
-  })();
-  function symbolShape(s){ return SHAPES[PAIRS[s][0]]; }
-  function symbolColor(s){ return INKS[PAIRS[s][1]]; }
+  /* ---------- Símbolos: 57 objetos cotidianos ---------- */
+  var EMOJIS = [
+    '✈️','🚗','🚌','🏍️','🚲','🚀','🚁','⛵','🚂',
+    '📱','💻','⌚','📷','🎧','📺','🔑','💡','🔋',
+    '⚽','🏀','🎮','🎲','🎸','🎤','🏆','🎬',
+    '🍕','🍔','🌮','🍦','🍎','🍌','☕','🎂','🍿',
+    '🐶','🐱','🐢','🦋','🐠','🌵','🌻','🌈','⭐','🌙',
+    '☀️','⚡','🔥','❄️','👟','🕶️','🎩','🎒','✂️','📚','⏰','🛒'
+  ]; // 57 símbolos únicos
 
   /* ---------- Mazo tipo plano proyectivo (orden 7):
      57 cartas, 8 símbolos por carta, cualquier par de cartas
@@ -316,9 +296,9 @@
         px=50+29.5*Math.cos(ang); py=50+29.5*Math.sin(ang); sc=RING_SCALES[i-1];
       }
       var rot=Math.floor(rnd()*360);
-      out += '<g class="sym" data-sym="'+s+'" color="'+symbolColor(s)+'" '+
+      out += '<g class="sym" data-sym="'+s+'" '+
              'transform="translate('+px.toFixed(1)+' '+py.toFixed(1)+') rotate('+rot+') scale('+sc+')">'+
-             symbolShape(s).el+
+             '<text font-size="15" text-anchor="middle" dominant-baseline="central" dy="0.5">'+EMOJIS[s]+'</text>'+
              (interactive ? '<circle class="hit" r="11.5"/>' : '')+
              '</g>';
     }
