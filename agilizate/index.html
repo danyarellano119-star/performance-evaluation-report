@@ -31,7 +31,7 @@
   .hidden{display:none !important}
   button{font-family:inherit; color:inherit; background:none; border:none; cursor:pointer}
   button:focus-visible, .chip:focus-visible{outline:3px solid var(--amarillo); outline-offset:2px}
-  #cardWord, #countdown, .zone .zscore, #victory h2, #startBtn, #againBtn{font-weight:900}
+  #countdown, #victory h2, #startBtn, #againBtn{font-weight:900}
 
   /* ---------- Marca ---------- */
   .brand{text-align:center; padding:clamp(18px,4vh,44px) 16px 6px}
@@ -66,7 +66,8 @@
   .chip[aria-pressed="true"]{
     background:var(--amarillo); border-color:var(--amarillo); color:#241A00; transform:scale(1.04);
   }
-  .modehint{font-size:.85rem; color:var(--text-dim); line-height:1.5}
+  .dealhint{font-size:.85rem; color:var(--text-dim); line-height:1.5}
+  .dealhint b{color:var(--text)}
   #startBtn{
     margin-top:4px; padding:18px; border-radius:16px;
     background:var(--rojo); color:#FFF6E3;
@@ -81,67 +82,50 @@
   .rules strong{color:var(--text)}
 
   /* ---------- Mesa de juego ---------- */
-  #game{gap:8px; padding:8px}
-  .zones{display:flex; gap:8px; flex:0 0 clamp(96px,20vh,180px)}
+  #game{gap:6px; padding:6px}
+  .zones{display:flex; gap:6px; flex:0 0 30%; min-height:0}
   .zone{
-    flex:1; border-radius:18px; border:2.5px solid var(--pc,#888);
-    background:color-mix(in srgb, var(--pc,#888) 14%, transparent);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
-    touch-action:none; position:relative; overflow:hidden;
-    transition:background .15s ease;
+    flex:1; min-width:0; border-radius:16px; border:2px solid var(--pc,#888);
+    background:color-mix(in srgb, var(--pc,#888) 12%, transparent);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    gap:2px; padding:6px 4px;
+    touch-action:manipulation; position:relative; overflow:hidden;
   }
   .zones.top .zone{transform:rotate(180deg)}
-  .zone .zname{font-weight:800; font-size:clamp(.85rem,2.4vw,1.1rem); color:var(--pc)}
-  .zone .zscore{
-    font-family:var(--display); font-size:clamp(1.7rem,6vw,3rem); line-height:1;
-    font-variant-numeric:tabular-nums;
+  .zone .zhead{
+    display:flex; align-items:baseline; gap:8px; flex:0 0 auto; max-width:100%;
   }
-  .zone .zkey{
-    font-size:.68rem; color:var(--text-dim); letter-spacing:.08em;
+  .zone .zname{
+    font-weight:800; font-size:clamp(.72rem,2vw,.95rem); color:var(--pc);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .zone .zkey kbd{
-    border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-family:var(--body); font-weight:700;
+  .zone .zcount{
+    font-size:clamp(.68rem,1.8vw,.8rem); color:var(--text-dim); font-variant-numeric:tabular-nums; white-space:nowrap;
   }
-  .zone.locked{opacity:.35; filter:saturate(.4)}
-  .zone.win{background:color-mix(in srgb, var(--pc) 55%, transparent)}
+  .zone svg.playcard{flex:1; min-height:0; width:auto; max-width:96%}
+  .zone.frozen{opacity:.35; filter:saturate(.3)}
   .zone.shake{animation:shake .4s ease}
+  .zone.win{background:color-mix(in srgb, var(--pc) 45%, transparent)}
+  .zone.done{justify-content:center}
+  .zone .zout{font-weight:800; color:var(--pc); font-size:clamp(.8rem,2.2vw,1rem)}
   @keyframes shake{
     0%,100%{translate:0 0} 20%{translate:-8px 0} 40%{translate:8px 0} 60%{translate:-6px 0} 80%{translate:6px 0}
   }
 
   #tableCenter{
-    flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
-    position:relative;
+    flex:1 1 auto; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; position:relative;
   }
-  .card{
-    width:min(64vw, 320px); aspect-ratio:5/7;
-    max-height:calc(100% - 96px); min-height:0;
-    background:var(--paper); border-radius:20px;
-    border:2px solid var(--paper-edge);
-    box-shadow:0 14px 34px rgba(0,0,0,.45), inset 0 0 0 8px #fff;
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6%;
-    padding:8%;
-    animation:deal .28s ease;
+  #centerCard{
+    flex:1; min-height:0; width:auto; max-width:min(46vw,300px);
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,.5));
   }
-  @keyframes deal{
-    from{transform:translateY(-14px) rotate(-3deg) scale(.94); opacity:0}
-    to{transform:none; opacity:1}
-  }
-  .card.claimed{animation:pop .5s ease}
-  @keyframes pop{
-    0%{transform:scale(1)} 35%{transform:scale(1.08) rotate(2deg)} 100%{transform:scale(1)}
-  }
-  .card svg{width:72%; height:auto; display:block}
-  #cardWord{
-    font-family:var(--display); font-size:clamp(1.2rem,5.4vw,2rem); letter-spacing:.02em;
-    transform:skewX(-4deg); text-align:center;
-  }
-  #timebar{
-    width:min(64vw,340px); height:6px; border-radius:99px; background:rgba(255,246,227,.14); overflow:hidden;
-  }
-  #timefill{display:block; height:100%; background:var(--amarillo); border-radius:99px; width:100%}
-  #timefill.run{animation:drain linear forwards}
-  @keyframes drain{from{width:100%} to{width:0%}}
+  #centerCard.pulse{animation:pulse .45s ease}
+  @keyframes pulse{ 0%{transform:scale(.86) rotate(-4deg)} 60%{transform:scale(1.05)} 100%{transform:scale(1)} }
+
+  svg.playcard .sym{cursor:default}
+  .zone svg.playcard .sym{cursor:pointer}
+  svg.playcard .sym .hit{fill:transparent; pointer-events:all}
 
   #countdown{
     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -149,11 +133,10 @@
     text-shadow:0 6px 0 rgba(0,0,0,.35); z-index:5; pointer-events:none;
   }
   #hud{
-    display:flex; gap:14px; align-items:center; font-size:.8rem; color:var(--text-dim);
+    flex:0 0 auto; display:flex; gap:12px; align-items:center; font-size:.78rem; color:var(--text-dim);
   }
-  #hud .goal{font-variant-numeric:tabular-nums}
   #hud button{
-    border:1px solid var(--line); border-radius:8px; padding:5px 12px; font-size:.78rem; color:var(--text-dim);
+    border:1px solid var(--line); border-radius:8px; padding:4px 11px; font-size:.76rem; color:var(--text-dim);
   }
   #hud button:hover{color:var(--text)}
 
@@ -174,8 +157,7 @@
   #againBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
 
   @media (prefers-reduced-motion:reduce){
-    .card, .card.claimed, .zone.shake{animation:none}
-    #timefill.run{animation-duration:0s !important; width:0}
+    .zone.shake, #centerCard.pulse{animation:none}
   }
 </style>
 
@@ -191,40 +173,20 @@
       <div class="field">
         <label>Jugadores</label>
         <div class="chips" id="playersChips" role="group" aria-label="Número de jugadores"></div>
-      </div>
-      <div class="field">
-        <label>Modo</label>
-        <div class="chips" id="modeChips" role="group" aria-label="Modo de juego">
-          <button class="chip" data-v="clasico" aria-pressed="true">Clásico</button>
-          <button class="chip" data-v="experto" aria-pressed="false">Experto</button>
-        </div>
-        <p class="modehint" id="modeHint"></p>
-      </div>
-      <div class="field">
-        <label>Velocidad</label>
-        <div class="chips" id="speedChips" role="group" aria-label="Velocidad">
-          <button class="chip" data-v="2300" aria-pressed="false">Tranquilo</button>
-          <button class="chip" data-v="1650" aria-pressed="true">Normal</button>
-          <button class="chip" data-v="1100" aria-pressed="false">¡Ágil!</button>
-        </div>
-      </div>
-      <div class="field">
-        <label>Gana con</label>
-        <div class="chips" id="goalChips" role="group" aria-label="Puntos para ganar">
-          <button class="chip" data-v="6" aria-pressed="false">6 puntos</button>
-          <button class="chip" data-v="10" aria-pressed="true">10 puntos</button>
-          <button class="chip" data-v="16" aria-pressed="false">16 puntos</button>
-        </div>
+        <p class="dealhint" id="dealHint"></p>
       </div>
       <button id="startBtn">¡A JUGAR!</button>
     </div>
     <p class="rules">
-      <strong>Cómo se juega:</strong> las cartas se voltean solas al centro de la mesa. Cada carta trae una
-      <strong>figura dibujada</strong> y el <strong>nombre de una figura</strong> escrito abajo.
-      Cuando el nombre y el dibujo <strong>coinciden</strong>, ¡golpea tu zona antes que nadie!
-      Acertar da <strong>+2 puntos</strong>; equivocarte resta <strong>1 punto</strong> y te congela hasta la
-      siguiente carta. En una tableta o teléfono pónganlo al centro de la mesa: los de enfrente ven su zona al derecho.
-      En computadora, cada jugador usa su tecla.
+      <strong>Cómo se juega:</strong> el mazo tiene <strong>55 cartas</strong> y cada carta trae 8 figuras.
+      Entre <strong>cualquier</strong> par de cartas siempre hay <strong>exactamente una figura igual</strong>
+      (misma forma y mismo color). Se reparten las cartas y la que sobra abre el centro de la mesa.
+      Cada jugador ve solo la <strong>carta de encima de su pila</strong> — las demás quedan boca abajo,
+      nadie sabe qué cartas te quedan. Todos juegan <strong>al mismo tiempo</strong>: encuentra la figura que tu
+      carta comparte con la del centro y <strong>tócala en tu carta</strong>. Si aciertas, tu carta cae al centro
+      y se vuelve la nueva carta a igualar. Si te equivocas, te congelas 2 segundos.
+      <strong>Gana el primero en quedarse sin cartas.</strong> Pongan la tableta o el teléfono al centro de la
+      mesa: las zonas de arriba se ven al derecho para los de enfrente.
     </p>
   </section>
 
@@ -233,13 +195,9 @@
     <div class="zones top" id="zonesTop"></div>
     <div id="tableCenter">
       <div id="countdown" class="hidden"></div>
-      <div class="card" id="card">
-        <svg id="figSvg" viewBox="0 0 100 100" aria-hidden="true"></svg>
-        <div id="cardWord"></div>
-      </div>
-      <div id="timebar"><i id="timefill"></i></div>
+      <svg id="centerCard" class="playcard" viewBox="0 0 100 100" aria-label="Carta del centro"></svg>
       <div id="hud">
-        <span class="goal" id="goalLabel"></span>
+        <span id="deckLabel"></span>
         <button id="muteBtn" type="button">🔊 Sonido</button>
         <button id="exitBtn" type="button">Salir</button>
       </div>
@@ -261,58 +219,113 @@
 (function(){
   'use strict';
 
-  /* ---------- Datos del juego ---------- */
-  var FIGURES = [
-    {id:'circulo',  name:'CÍRCULO',  svg:'<circle cx="50" cy="50" r="38"/>'},
-    {id:'cuadrado', name:'CUADRADO', svg:'<rect x="13" y="13" width="74" height="74" rx="10"/>'},
-    {id:'triangulo',name:'TRIÁNGULO',svg:'<path d="M50 9 L93 86 L7 86 Z"/>'},
-    {id:'estrella', name:'ESTRELLA', svg:'<path d="M50 5 L61 37 L95 38 L68 59 L78 93 L50 73 L22 93 L32 59 L5 38 L39 37 Z"/>'},
-    {id:'corazon',  name:'CORAZÓN',  svg:'<path d="M50 89 C21 63 8 45 8 30 C8 16 19 7 31 7 C40 7 46 12 50 20 C54 12 60 7 69 7 C81 7 92 16 92 30 C92 45 79 63 50 89 Z"/>'},
-    {id:'luna',     name:'LUNA',     svg:'<path d="M63 6 A45 45 0 1 0 63 94 A37 37 0 1 1 63 6 Z"/>'}
+  /* ---------- Símbolos: 12 formas × 5 colores = 60, se usan 57 ---------- */
+  var SHAPES = [
+    {id:'circulo',  el:'<circle r="8.6" fill="currentColor"/>'},
+    {id:'cuadrado', el:'<rect x="-7.6" y="-7.6" width="15.2" height="15.2" rx="2" fill="currentColor"/>'},
+    {id:'triangulo',el:'<path d="M0 -8.8 L8.8 7.6 L-8.8 7.6 Z" fill="currentColor"/>'},
+    {id:'estrella', el:'<path d="M0 -9.6 L2.5 -3.1 L9.4 -2.9 L4 1.5 L6 8.6 L0 4.4 L-6 8.6 L-4 1.5 L-9.4 -2.9 L-2.5 -3.1 Z" fill="currentColor"/>'},
+    {id:'corazon',  el:'<path d="M0 8.2 C-6.3 2.9 -8.7 -0.5 -8.7 -3.4 C-8.7 -6.3 -6.5 -8.2 -4.1 -8.2 C-2.1 -8.2 -0.8 -7.1 0 -5.6 C0.8 -7.1 2.1 -8.2 4.1 -8.2 C6.5 -8.2 8.7 -6.3 8.7 -3.4 C8.7 -0.5 6.3 2.9 0 8.2 Z" fill="currentColor"/>'},
+    {id:'luna',     el:'<path d="M2.7 -8.7 A9 9 0 1 0 2.7 8.7 A7.2 7.2 0 1 1 2.7 -8.7 Z" fill="currentColor"/>'},
+    {id:'rombo',    el:'<path d="M0 -9 L7.6 0 L0 9 L-7.6 0 Z" fill="currentColor"/>'},
+    {id:'cruz',     el:'<path d="M-2.9 -8.8 H2.9 V-2.9 H8.8 V2.9 H2.9 V8.8 H-2.9 V2.9 H-8.8 V-2.9 H-2.9 Z" fill="currentColor"/>'},
+    {id:'rayo',     el:'<path d="M2 -9.6 L-6 0.8 L-1.2 0.8 L-2 9.6 L6 -0.8 L1.2 -0.8 Z" fill="currentColor"/>'},
+    {id:'gota',     el:'<path d="M0 -9 C3.8 -3.4 6.6 -0.2 6.6 3 A6.6 6.6 0 1 1 -6.6 3 C-6.6 -0.2 -3.8 -3.4 0 -9 Z" fill="currentColor"/>'},
+    {id:'hexagono', el:'<path d="M0 -8.8 L7.6 -4.4 L7.6 4.4 L0 8.8 L-7.6 4.4 L-7.6 -4.4 Z" fill="currentColor"/>'},
+    {id:'anillo',   el:'<circle r="6.4" fill="none" stroke="currentColor" stroke-width="4.2"/>'}
   ];
-  var COLORS = [
-    {id:'rojo',    hex:'#E8413C'},
-    {id:'azul',    hex:'#2F6BFF'},
-    {id:'amarillo',hex:'#E8AE00'},
-    {id:'verde',   hex:'#17B26A'},
-    {id:'morado',  hex:'#8B5CF6'}
-  ];
-  var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
-  var PLAYER_KEYS   = ['a','l','q','p','c','m'];
-  var MATCH_RATE = 0.3;
+  var INKS = ['#E8413C','#2F6BFF','#E8AE00','#17B26A','#8B5CF6'];
 
-  /* ---------- Configuración ---------- */
-  var cfg = {players:2, mode:'clasico', speed:1650, goal:10};
+  // Símbolo s (0..56) → forma y color fijos, con una permutación sembrada para que
+  // ninguna carta salga con todas sus figuras del mismo color
+  var PAIRS = (function(){
+    var arr=[], sh, c;
+    for(sh=0; sh<12; sh++) for(c=0; c<5; c++) arr.push([sh,c]);
+    var rnd = mulberry32(20260706);
+    for(var i=arr.length-1; i>0; i--){
+      var j=Math.floor(rnd()*(i+1)), t=arr[i]; arr[i]=arr[j]; arr[j]=t;
+    }
+    return arr; // 60 combinaciones únicas; se usan las primeras 57
+  })();
+  function symbolShape(s){ return SHAPES[PAIRS[s][0]]; }
+  function symbolColor(s){ return INKS[PAIRS[s][1]]; }
 
-  var MODE_HINTS = {
-    clasico:'Golpea cuando la palabra dice la figura que está dibujada. El color es puro engaño.',
-    experto:'Golpea solo si la palabra dice la figura dibujada Y está escrita del mismo color que el dibujo. Doble trampa.'
-  };
+  /* ---------- Mazo tipo plano proyectivo (orden 7):
+     57 cartas, 8 símbolos por carta, cualquier par de cartas
+     comparte exactamente un símbolo. ---------- */
+  function buildDeck(){
+    var N=7, cards=[], m, b, x, y;
+    // punto (x,y) → id x*7+y (0..48); infinito de pendiente m → 49+m; infinito vertical → 56
+    for(m=0; m<N; m++){
+      for(b=0; b<N; b++){
+        var c=[];
+        for(x=0; x<N; x++) c.push(x*N + (m*x+b)%N);
+        c.push(49+m);
+        cards.push(c);
+      }
+    }
+    for(x=0; x<N; x++){
+      var v=[];
+      for(y=0; y<N; y++) v.push(x*N+y);
+      v.push(56);
+      cards.push(v);
+    }
+    var inf=[];
+    for(m=0; m<N; m++) inf.push(49+m);
+    inf.push(56);
+    cards.push(inf);
+    return cards; // 57 cartas
+  }
+  var DECK = buildDeck();
 
-  function bindChips(containerId, onPick){
-    var box = document.getElementById(containerId);
-    box.addEventListener('click', function(e){
-      var chip = e.target.closest('.chip');
-      if(!chip) return;
-      box.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
-      onPick(chip.dataset.v);
-    });
+  /* ---------- Aleatoriedad con semilla (para dibujar cada carta igual siempre) ---------- */
+  function mulberry32(seed){
+    return function(){
+      seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+      var t = Math.imul(seed ^ (seed>>>15), 1 | seed);
+      t = (t + Math.imul(t ^ (t>>>7), 61 | t)) ^ t;
+      return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr){
+    var a=arr.slice();
+    for(var i=a.length-1; i>0; i--){
+      var j=Math.floor(Math.random()*(i+1)), t=a[i]; a[i]=a[j]; a[j]=t;
+    }
+    return a;
   }
 
-  var playersBox = document.getElementById('playersChips');
-  for(var n=2; n<=6; n++){
-    var b = document.createElement('button');
-    b.className='chip'; b.dataset.v=n; b.textContent=n+' jugadores';
-    b.setAttribute('aria-pressed', n===2 ? 'true':'false');
-    playersBox.appendChild(b);
+  /* ---------- Dibujo de cartas (redondas, 8 figuras) ---------- */
+  var RING_SCALES=[1.12, .85, 1.0, .9, 1.08, .8, .95];
+  function cardSVG(cardIdx, interactive){
+    var syms = DECK[cardIdx];
+    var rnd = mulberry32(cardIdx*7919+13);
+    var out = '<circle cx="50" cy="50" r="48.5" fill="'+'#FFF6E3'+'" stroke="#E9DCBE" stroke-width="2"/>' +
+              '<circle cx="50" cy="50" r="44.5" fill="none" stroke="#EFE3C4" stroke-width="1"/>';
+    var order = syms.slice();
+    // orden barajado con semilla para que el centro no sea siempre el mismo símbolo
+    for(var i=order.length-1; i>0; i--){
+      var j=Math.floor(rnd()*(i+1)), t=order[i]; order[i]=order[j]; order[j]=t;
+    }
+    var baseAngle = rnd()*360;
+    for(i=0; i<8; i++){
+      var s=order[i], px, py, sc;
+      if(i===0){ px=50; py=50; sc=1.3; }
+      else{
+        var ang=(baseAngle + (i-1)*(360/7)) * Math.PI/180;
+        px=50+29.5*Math.cos(ang); py=50+29.5*Math.sin(ang); sc=RING_SCALES[i-1];
+      }
+      var rot=Math.floor(rnd()*360);
+      out += '<g class="sym" data-sym="'+s+'" color="'+symbolColor(s)+'" '+
+             'transform="translate('+px.toFixed(1)+' '+py.toFixed(1)+') rotate('+rot+') scale('+sc+')">'+
+             symbolShape(s).el+
+             (interactive ? '<circle class="hit" r="11.5"/>' : '')+
+             '</g>';
+    }
+    return out;
   }
-  bindChips('playersChips', function(v){ cfg.players=+v; });
-  bindChips('modeChips',    function(v){ cfg.mode=v; document.getElementById('modeHint').textContent=MODE_HINTS[v]; });
-  bindChips('speedChips',   function(v){ cfg.speed=+v; });
-  bindChips('goalChips',    function(v){ cfg.goal=+v; });
-  document.getElementById('modeHint').textContent = MODE_HINTS.clasico;
 
-  /* ---------- Sonido (WebAudio, sin archivos) ---------- */
+  /* ---------- Sonido ---------- */
   var audioCtx=null, muted=false;
   function beep(freq, dur, type, when, gain){
     if(muted) return;
@@ -328,7 +341,6 @@
     }catch(e){}
   }
   var sfx = {
-    flip:  function(){ beep(660,.05,'triangle',0,.04); },
     good:  function(){ beep(523,.09,'square'); beep(784,.12,'square',.09); beep(1046,.18,'square',.2); },
     bad:   function(){ beep(160,.25,'sawtooth',0,.09); },
     count: function(){ beep(440,.08,'triangle',0,.06); },
@@ -340,137 +352,139 @@
     this.textContent = muted ? '🔇 Sin sonido' : '🔊 Sonido';
   });
 
+  /* ---------- Configuración ---------- */
+  var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
+  var cfg = {players:2};
+
+  function perPlayer(P){ return Math.floor(54/P); }
+  function updateDealHint(){
+    var per = perPlayer(cfg.players);
+    var used = per*cfg.players + 1;
+    var msg = 'Se reparten <b>'+per+' cartas por jugador</b>; una carta abre el centro';
+    if(used < 55) msg += ' y '+(55-used)+' quedan fuera';
+    document.getElementById('dealHint').innerHTML = msg + '.';
+  }
+  var playersBox = document.getElementById('playersChips');
+  for(var n=2; n<=6; n++){
+    var b = document.createElement('button');
+    b.className='chip'; b.dataset.v=n; b.textContent=n+' jugadores';
+    b.setAttribute('aria-pressed', n===2 ? 'true':'false');
+    playersBox.appendChild(b);
+  }
+  playersBox.addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    playersBox.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+    cfg.players = +chip.dataset.v;
+    updateDealHint();
+  });
+  updateDealHint();
+
   /* ---------- Estado ---------- */
-  var state='idle';          // idle | countdown | playing | claimed | over
-  var players=[];            // {i, name, color, key, score, locked, el, scoreEl}
-  var current=null;          // {figure, figColor, word, wordColor, isMatch}
-  var flipTimer=null, pendingTimers=[];
+  var state='idle';          // idle | countdown | playing | over
+  var players=[];            // {i, name, color, pile:[cardIdx...], frozen, el, svg, countEl}
+  var centerIdx=-1;
+  var pendingTimers=[];
 
   var $game=document.getElementById('game'), $setup=document.getElementById('setup'),
       $victory=document.getElementById('victory'),
-      $card=document.getElementById('card'), $fig=document.getElementById('figSvg'),
-      $word=document.getElementById('cardWord'), $fill=document.getElementById('timefill'),
-      $count=document.getElementById('countdown');
+      $center=document.getElementById('centerCard'), $count=document.getElementById('countdown');
 
   function later(fn, ms){ pendingTimers.push(setTimeout(fn, ms)); }
-  function clearTimers(){
-    if(flipTimer) clearTimeout(flipTimer);
-    pendingTimers.forEach(clearTimeout);
-    flipTimer=null; pendingTimers=[];
-  }
-  function rand(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-  function randOther(arr, not){
-    var pick; do{ pick = rand(arr); }while(pick===not);
-    return pick;
-  }
+  function clearTimers(){ pendingTimers.forEach(clearTimeout); pendingTimers=[]; }
 
-  /* ---------- Zonas de jugadores ---------- */
+  /* ---------- Zonas ---------- */
   function buildZones(){
-    players = [];
+    players=[];
     var top=document.getElementById('zonesTop'), bottom=document.getElementById('zonesBottom');
     top.innerHTML=''; bottom.innerHTML='';
-    var nBottom = Math.ceil(cfg.players/2);
-    for(var i=0;i<cfg.players;i++){
-      var p = {i:i, name:'Jugador '+(i+1), color:PLAYER_COLORS[i], key:PLAYER_KEYS[i], score:0, locked:false};
-      var z = document.createElement('button');
-      z.className='zone'; z.type='button';
+    var nBottom=Math.ceil(cfg.players/2);
+    for(var i=0; i<cfg.players; i++){
+      var p={i:i, name:'Jugador '+(i+1), color:PLAYER_COLORS[i], pile:[], frozen:false};
+      var z=document.createElement('div');
+      z.className='zone';
       z.style.setProperty('--pc', p.color);
-      z.innerHTML = '<span class="zname">'+p.name+'</span>'+
-                    '<span class="zscore">0</span>'+
-                    '<span class="zkey">tecla <kbd>'+p.key.toUpperCase()+'</kbd></span>';
-      p.el=z; p.scoreEl=z.querySelector('.zscore');
+      z.innerHTML='<div class="zhead"><span class="zname">'+p.name+'</span>'+
+                  '<span class="zcount"></span></div>'+
+                  '<svg class="playcard" viewBox="0 0 100 100" aria-label="Carta de '+p.name+'"></svg>';
+      p.el=z; p.svg=z.querySelector('svg'); p.countEl=z.querySelector('.zcount');
       (i<nBottom ? bottom : top).appendChild(z);
-      (function(pp){
-        z.addEventListener('pointerdown', function(e){ e.preventDefault(); slap(pp); });
-      })(p);
+      attachTap(p);
       players.push(p);
     }
     top.style.display = cfg.players>nBottom ? '' : 'none';
   }
 
-  document.addEventListener('keydown', function(e){
-    if(state!=='playing' && state!=='claimed') return;
-    if(e.repeat) return;
-    var k = e.key.toLowerCase();
-    for(var i=0;i<players.length;i++){
-      if(players[i].key===k){ slap(players[i]); return; }
-    }
-  });
+  function attachTap(p){
+    p.svg.addEventListener('pointerdown', function(e){
+      var g = e.target.closest('.sym');
+      if(!g) return;
+      e.preventDefault();
+      tapSymbol(p, +g.getAttribute('data-sym'));
+    });
+  }
 
-  /* ---------- Cartas ---------- */
-  function makeCard(){
-    var figure = rand(FIGURES);
-    var figColor = rand(COLORS);
-    var word, wordColor, isMatch = Math.random() < MATCH_RATE;
-    if(cfg.mode==='clasico'){
-      word = isMatch ? figure : randOther(FIGURES, figure);
-      wordColor = rand(COLORS);
-    }else{
-      if(isMatch){ word=figure; wordColor=figColor; }
-      else{
-        var r = Math.random();
-        if(r<0.45){ word=figure; wordColor=randOther(COLORS, figColor); }        // figura correcta, color traidor
-        else if(r<0.75){ word=randOther(FIGURES, figure); wordColor=figColor; }  // color correcto, figura traidora
-        else{ word=randOther(FIGURES, figure); wordColor=randOther(COLORS, figColor); }
+  /* ---------- Render ---------- */
+  function renderCenter(){
+    $center.innerHTML = cardSVG(centerIdx, false);
+    $center.classList.remove('pulse'); void $center.offsetWidth; $center.classList.add('pulse');
+  }
+  function renderPlayer(p){
+    var left = p.pile.length;
+    if(left===0){
+      p.el.classList.add('done');
+      p.svg.remove();
+      if(!p.el.querySelector('.zout')){
+        var d=document.createElement('div'); d.className='zout'; d.textContent='¡Sin cartas!';
+        p.el.appendChild(d);
       }
+      p.countEl.textContent='0 cartas';
+      return;
     }
-    return {figure:figure, figColor:figColor, word:word, wordColor:wordColor, isMatch:isMatch};
+    p.svg.innerHTML = cardSVG(p.pile[p.pile.length-1], true);
+    p.countEl.textContent = left+(left===1?' carta':' cartas');
   }
 
-  function flipCard(){
-    state='playing';
-    current = makeCard();
-    players.forEach(function(p){ p.locked=false; p.el.classList.remove('locked','win','shake'); });
-
-    $fig.innerHTML = current.figure.svg;
-    $fig.firstChild.setAttribute('fill', current.figColor.hex);
-    $word.textContent = current.word.name;
-    $word.style.color = current.wordColor.hex;
-
-    $card.classList.remove('claimed');
-    $card.style.animation='none'; void $card.offsetWidth; $card.style.animation='';
-
-    $fill.classList.remove('run'); void $fill.offsetWidth;
-    $fill.style.animationDuration = cfg.speed+'ms';
-    $fill.classList.add('run');
-
-    sfx.flip();
-    flipTimer = setTimeout(flipCard, cfg.speed);
-  }
-
-  /* ---------- Golpes ---------- */
-  function slap(p){
-    if(state!=='playing' || p.locked) return;
-    if(current && current.isMatch){
-      state='claimed';
-      if(flipTimer) clearTimeout(flipTimer);
-      $fill.classList.remove('run');
-      p.score += 2;
-      p.scoreEl.textContent = p.score;
-      p.el.classList.add('win');
-      $card.classList.add('claimed');
+  /* ---------- Juego ---------- */
+  function tapSymbol(p, sym){
+    if(state!=='playing' || p.frozen || p.pile.length===0) return;
+    if(DECK[centerIdx].indexOf(sym) !== -1){
+      // símbolo compartido encontrado: la carta del jugador pasa al centro
+      centerIdx = p.pile.pop();
+      renderCenter();
+      renderPlayer(p);
       sfx.good();
-      if(p.score >= cfg.goal){
-        later(function(){ endGame(p); }, 900);
-      }else{
-        later(flipCard, 900);
-      }
+      p.el.classList.remove('shake');
+      p.el.classList.add('win');
+      later(function(){ p.el.classList.remove('win'); }, 450);
+      if(p.pile.length===0) endGame(p);
     }else{
-      p.score = Math.max(0, p.score-1);
-      p.scoreEl.textContent = p.score;
-      p.locked = true;
-      p.el.classList.add('locked','shake');
+      p.frozen=true;
+      p.el.classList.add('frozen','shake');
       sfx.bad();
+      later(function(){
+        p.frozen=false;
+        p.el.classList.remove('frozen','shake');
+      }, 2000);
     }
   }
 
-  /* ---------- Flujo de partida ---------- */
   function startGame(){
     clearTimers();
     buildZones();
-    document.getElementById('goalLabel').textContent = 'Meta: '+cfg.goal+' pts · '+(cfg.mode==='experto'?'Experto':'Clásico');
+    // 55 cartas: del mazo de 57 se apartan 2 al azar
+    var order = shuffle(DECK.map(function(_, i){ return i; }));
+    var deal = order.slice(2); // 55
+    centerIdx = deal[0];
+    var per = perPlayer(cfg.players);
+    players.forEach(function(p, i){
+      p.pile = deal.slice(1+i*per, 1+(i+1)*per);
+    });
+    document.getElementById('deckLabel').textContent =
+      'Iguala la figura del centro · '+per+' cartas por jugador';
     $setup.classList.add('hidden'); $victory.classList.add('hidden'); $game.classList.remove('hidden');
-    $fig.innerHTML=''; $word.textContent=''; $fill.classList.remove('run');
+    $center.innerHTML='';
+    players.forEach(function(p){ p.countEl.textContent = p.pile.length+' cartas'; });
     state='countdown';
     $count.classList.remove('hidden');
     var steps=['3','2','1','¡YA!'];
@@ -480,22 +494,30 @@
         if(s==='¡YA!'){ sfx.go(); } else { sfx.count(); }
       }, i*700);
     });
-    later(function(){ $count.classList.add('hidden'); flipCard(); }, steps.length*700);
+    later(function(){
+      $count.classList.add('hidden');
+      renderCenter();
+      players.forEach(renderPlayer);
+      state='playing';
+    }, steps.length*700);
   }
 
   function endGame(winner){
     clearTimers();
     state='over';
-    $game.classList.add('hidden');
-    $victory.classList.remove('hidden');
-    var wt = document.getElementById('winnerText');
-    wt.textContent = '¡'+winner.name+' gana!';
-    document.getElementById('victory').style.setProperty('--wc', winner.color);
-    var sorted = players.slice().sort(function(a,b){ return b.score-a.score; });
-    document.getElementById('standings').innerHTML = sorted.map(function(p){
-      return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+p.score+' pts</span>';
-    }).join('');
-    sfx.win();
+    later(function(){
+      $game.classList.add('hidden');
+      $victory.classList.remove('hidden');
+      document.getElementById('winnerText').textContent='¡'+winner.name+' gana!';
+      document.getElementById('victory').style.setProperty('--wc', winner.color);
+      var sorted=players.slice().sort(function(a,b){ return a.pile.length-b.pile.length; });
+      document.getElementById('standings').innerHTML=sorted.map(function(p){
+        var left=p.pile.length;
+        return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+
+               (left===0 ? 'sin cartas' : 'le quedaron '+left)+'</span>';
+      }).join('');
+      sfx.win();
+    }, 900);
   }
 
   document.getElementById('startBtn').addEventListener('click', startGame);
@@ -506,6 +528,9 @@
     clearTimers(); state='idle';
     $game.classList.add('hidden'); $setup.classList.remove('hidden');
   });
+
+  // gancho de verificación (pruebas)
+  window.__agilizate = { DECK: DECK };
 })();
 </script>
 <!-- AGILIZATE:CONTENT-END -->
