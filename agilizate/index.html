@@ -68,6 +68,16 @@
   }
   .dealhint{font-size:.85rem; color:var(--text-dim); line-height:1.5}
   .dealhint b{color:var(--text)}
+  .names{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .names input{
+    width:100%; padding:10px 12px; border-radius:10px;
+    border:1.5px solid var(--line); border-left:5px solid var(--pc,#888);
+    background:rgba(255,246,227,.06); color:var(--text);
+    font-family:inherit; font-size:.95rem;
+    -webkit-user-select:text; user-select:text;
+  }
+  .names input::placeholder{color:var(--text-dim)}
+  .names input:focus{outline:2px solid var(--amarillo); outline-offset:1px}
   #startBtn{
     margin-top:4px; padding:18px; border-radius:16px;
     background:var(--rojo); color:#FFF6E3;
@@ -149,12 +159,32 @@
   }
   #victory .standings{display:flex; flex-direction:column; gap:6px; color:var(--text-dim); font-variant-numeric:tabular-nums}
   #victory .standings b{color:var(--text)}
-  #againBtn{
+  #againBtn, #newSessionBtn{
     padding:16px 34px; border-radius:14px; background:var(--verde); color:#04240F;
-    font-family:var(--display); font-size:1.15rem; transform:skewX(-4deg);
+    font-family:var(--display); font-weight:900; font-size:1.15rem; transform:skewX(-4deg);
     box-shadow:0 7px 0 #0B6B3E;
   }
-  #againBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
+  #againBtn:active, #newSessionBtn:active{transform:skewX(-4deg) translateY(5px); box-shadow:0 2px 0 #0B6B3E}
+
+  /* ---------- Resultados de la sesión ---------- */
+  #final{align-items:center; justify-content:flex-start; gap:20px; padding:28px 20px; overflow-y:auto; text-align:center}
+  #final .trophy{font-size:clamp(2.6rem,10vw,4.5rem); line-height:1}
+  #final h2{
+    font-family:var(--display); font-weight:900; font-size:clamp(1.5rem,6.5vw,2.7rem);
+    transform:skewX(-5deg); color:var(--wc,var(--amarillo)); text-wrap:balance;
+  }
+  .results{border-collapse:collapse; width:min(440px,92vw)}
+  .results caption{
+    text-align:left; font-size:.7rem; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--text-dim); font-weight:700; padding-bottom:8px;
+  }
+  .results th, .results td{
+    padding:8px 12px; border-bottom:1px solid var(--line); text-align:left;
+    font-size:.95rem; font-variant-numeric:tabular-nums;
+  }
+  .results th{font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--text-dim); font-weight:700}
+  .results td.num{text-align:right}
+  .results td b{font-weight:800}
 
   @media (prefers-reduced-motion:reduce){
     .zone.shake, #centerCard.pulse{animation:none}
@@ -173,7 +203,24 @@
       <div class="field">
         <label>Jugadores</label>
         <div class="chips" id="playersChips" role="group" aria-label="Número de jugadores"></div>
+      </div>
+      <div class="field">
+        <label>Cartas por jugador</label>
+        <div class="chips" id="cardsChips" role="group" aria-label="Cartas por jugador"></div>
         <p class="dealhint" id="dealHint"></p>
+      </div>
+      <div class="field">
+        <label>Partidas en la sesión</label>
+        <div class="chips" id="gamesChips" role="group" aria-label="Partidas de la sesión">
+          <button class="chip" data-v="1" aria-pressed="false">1 partida</button>
+          <button class="chip" data-v="3" aria-pressed="true">3 partidas</button>
+          <button class="chip" data-v="5" aria-pressed="false">5 partidas</button>
+          <button class="chip" data-v="7" aria-pressed="false">7 partidas</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nombres de los jugadores</label>
+        <div class="names" id="nameFields"></div>
       </div>
       <button id="startBtn">¡A JUGAR!</button>
     </div>
@@ -206,12 +253,30 @@
     <div class="zones bottom" id="zonesBottom"></div>
   </section>
 
-  <!-- Victoria -->
+  <!-- Victoria de una partida -->
   <section id="victory" class="screen hidden">
     <div class="trophy">🏆</div>
     <h2 id="winnerText"></h2>
     <div class="standings" id="standings"></div>
-    <button id="againBtn">Otra ronda</button>
+    <div class="standings" id="sessionScore"></div>
+    <button id="againBtn">Siguiente partida</button>
+  </section>
+
+  <!-- Resultados de la sesión -->
+  <section id="final" class="screen hidden">
+    <div class="trophy">🎉</div>
+    <h2 id="champText"></h2>
+    <table class="results">
+      <caption>Partidas jugadas</caption>
+      <thead><tr><th>Partida</th><th>Ganador</th></tr></thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+    <table class="results">
+      <caption>Marcador final</caption>
+      <thead><tr><th>Jugador</th><th>Victorias</th></tr></thead>
+      <tbody id="totalsBody"></tbody>
+    </table>
+    <button id="newSessionBtn">Nueva sesión</button>
   </section>
 
 </div>
@@ -334,16 +399,58 @@
 
   /* ---------- Configuración ---------- */
   var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
-  var cfg = {players:2};
+  var cfg = {players:2, cards:9, games:3}; // cards: número o 'max'
+  var names = []; // nombres escritos por los jugadores
 
-  function perPlayer(P){ return Math.floor(54/P); }
+  function maxPer(P){ return Math.floor(54/P); }
+  function perPlayer(P){
+    var mx = maxPer(P);
+    return cfg.cards==='max' ? mx : Math.min(cfg.cards, mx);
+  }
   function updateDealHint(){
     var per = perPlayer(cfg.players);
     var used = per*cfg.players + 1;
-    var msg = 'Se reparten <b>'+per+' cartas por jugador</b>; una carta abre el centro';
+    var msg = 'Se reparten <b>'+per+' cartas a cada uno</b> de los '+cfg.players+
+              ' jugadores; una carta abre el centro';
     if(used < 55) msg += ' y '+(55-used)+' quedan fuera';
     document.getElementById('dealHint').innerHTML = msg + '.';
   }
+
+  function buildCardChips(){
+    var box = document.getElementById('cardsChips');
+    var mx = maxPer(cfg.players);
+    box.innerHTML='';
+    [5,7,9].filter(function(v){ return v<mx; }).forEach(function(v){
+      var b=document.createElement('button');
+      b.className='chip'; b.dataset.v=v; b.textContent=v+' cartas';
+      box.appendChild(b);
+    });
+    var m=document.createElement('button');
+    m.className='chip'; m.dataset.v='max'; m.textContent='Máximo ('+mx+')';
+    box.appendChild(m);
+    var sel = (cfg.cards==='max' || cfg.cards>=mx) ? 'max' : String(cfg.cards);
+    box.querySelectorAll('.chip').forEach(function(c){
+      c.setAttribute('aria-pressed', c.dataset.v===sel ? 'true':'false');
+    });
+  }
+
+  function buildNameFields(){
+    var box = document.getElementById('nameFields');
+    box.innerHTML='';
+    for(var i=0; i<cfg.players; i++){
+      var inp=document.createElement('input');
+      inp.type='text'; inp.maxLength=14;
+      inp.placeholder='Jugador '+(i+1);
+      inp.value=names[i]||'';
+      inp.setAttribute('aria-label','Nombre del jugador '+(i+1));
+      inp.style.setProperty('--pc', PLAYER_COLORS[i]);
+      (function(idx){
+        inp.addEventListener('input', function(){ names[idx]=this.value; });
+      })(i);
+      box.appendChild(inp);
+    }
+  }
+
   var playersBox = document.getElementById('playersChips');
   for(var n=2; n<=6; n++){
     var b = document.createElement('button');
@@ -356,15 +463,29 @@
     if(!chip) return;
     playersBox.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
     cfg.players = +chip.dataset.v;
+    buildCardChips(); buildNameFields(); updateDealHint();
+  });
+  document.getElementById('cardsChips').addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+    cfg.cards = chip.dataset.v==='max' ? 'max' : +chip.dataset.v;
     updateDealHint();
   });
-  updateDealHint();
+  document.getElementById('gamesChips').addEventListener('click', function(e){
+    var chip = e.target.closest('.chip');
+    if(!chip) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip ? 'true':'false'); });
+    cfg.games = +chip.dataset.v;
+  });
+  buildCardChips(); buildNameFields(); updateDealHint();
 
   /* ---------- Estado ---------- */
   var state='idle';          // idle | countdown | playing | over
   var players=[];            // {i, name, color, pile:[cardIdx...], frozen, el, svg, countEl}
   var centerIdx=-1;
   var pendingTimers=[];
+  var session={planned:1, played:0, wins:[], history:[]};
 
   var $game=document.getElementById('game'), $setup=document.getElementById('setup'),
       $victory=document.getElementById('victory'),
@@ -380,7 +501,8 @@
     top.innerHTML=''; bottom.innerHTML='';
     var nBottom=Math.ceil(cfg.players/2);
     for(var i=0; i<cfg.players; i++){
-      var p={i:i, name:'Jugador '+(i+1), color:PLAYER_COLORS[i], pile:[], frozen:false};
+      var pname=(names[i]||'').trim() || 'Jugador '+(i+1);
+      var p={i:i, name:pname, color:PLAYER_COLORS[i], pile:[], frozen:false};
       var z=document.createElement('div');
       z.className='zone';
       z.style.setProperty('--pc', p.color);
@@ -461,7 +583,7 @@
       p.pile = deal.slice(1+i*per, 1+(i+1)*per);
     });
     document.getElementById('deckLabel').textContent =
-      'Iguala la figura del centro · '+per+' cartas por jugador';
+      'Partida '+(session.played+1)+' de '+session.planned+' · '+per+' cartas por jugador';
     $setup.classList.add('hidden'); $victory.classList.add('hidden'); $game.classList.remove('hidden');
     $center.innerHTML='';
     players.forEach(function(p){ p.countEl.textContent = p.pile.length+' cartas'; });
@@ -485,10 +607,14 @@
   function endGame(winner){
     clearTimers();
     state='over';
+    session.played++;
+    session.wins[winner.i]++;
+    session.history.push({n:session.played, name:winner.name, color:winner.color});
     later(function(){
       $game.classList.add('hidden');
       $victory.classList.remove('hidden');
-      document.getElementById('winnerText').textContent='¡'+winner.name+' gana!';
+      document.getElementById('winnerText').textContent=
+        '¡'+winner.name+' gana la partida '+session.played+'!';
       document.getElementById('victory').style.setProperty('--wc', winner.color);
       var sorted=players.slice().sort(function(a,b){ return a.pile.length-b.pile.length; });
       document.getElementById('standings').innerHTML=sorted.map(function(p){
@@ -496,17 +622,77 @@
         return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+
                (left===0 ? 'sin cartas' : 'le quedaron '+left)+'</span>';
       }).join('');
+      document.getElementById('sessionScore').innerHTML=
+        '<span>Marcador de la sesión ('+session.played+' de '+session.planned+' partidas):</span>'+
+        players.map(function(p){
+          var w=session.wins[p.i];
+          return '<span><b style="color:'+p.color+'">'+p.name+'</b> — '+
+                 w+(w===1?' victoria':' victorias')+'</span>';
+        }).join('');
+      document.getElementById('againBtn').textContent =
+        session.played < session.planned
+          ? 'Partida '+(session.played+1)+' de '+session.planned
+          : 'Ver resultados finales';
       sfx.win();
     }, 900);
   }
 
-  document.getElementById('startBtn').addEventListener('click', startGame);
+  function showFinal(){
+    state='idle';
+    $game.classList.add('hidden'); $victory.classList.add('hidden');
+    var $final=document.getElementById('final');
+    $final.classList.remove('hidden');
+    var best=Math.max.apply(null, session.wins);
+    var champs=players.filter(function(p){ return session.wins[p.i]===best && best>0; });
+    var champText=document.getElementById('champText');
+    if(champs.length===1){
+      champText.textContent='¡'+champs[0].name+' es quien más ganó!';
+      $final.style.setProperty('--wc', champs[0].color);
+    }else if(champs.length>1){
+      champText.textContent='¡Empate entre '+champs.map(function(p){ return p.name; }).join(' y ')+'!';
+      $final.style.setProperty('--wc', 'var(--amarillo)');
+    }else{
+      champText.textContent='Sesión terminada';
+      $final.style.setProperty('--wc', 'var(--amarillo)');
+    }
+    document.getElementById('historyBody').innerHTML =
+      session.history.length
+        ? session.history.map(function(h){
+            return '<tr><td>Partida '+h.n+'</td><td><b style="color:'+h.color+'">'+h.name+'</b></td></tr>';
+          }).join('')
+        : '<tr><td colspan="2">No se completó ninguna partida.</td></tr>';
+    var order=players.slice().sort(function(a,b){ return session.wins[b.i]-session.wins[a.i]; });
+    document.getElementById('totalsBody').innerHTML = order.map(function(p){
+      return '<tr><td><b style="color:'+p.color+'">'+p.name+'</b></td>'+
+             '<td class="num">'+session.wins[p.i]+'</td></tr>';
+    }).join('');
+  }
+
+  function startSession(){
+    session={planned:cfg.games, played:0, wins:[], history:[]};
+    for(var i=0; i<cfg.players; i++) session.wins.push(0);
+    startGame();
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startSession);
   document.getElementById('againBtn').addEventListener('click', function(){
-    $victory.classList.add('hidden'); $setup.classList.remove('hidden'); state='idle';
+    if(session.played < session.planned){
+      $victory.classList.add('hidden');
+      startGame();
+    }else{
+      showFinal();
+    }
+  });
+  document.getElementById('newSessionBtn').addEventListener('click', function(){
+    document.getElementById('final').classList.add('hidden');
+    $setup.classList.remove('hidden'); state='idle';
   });
   document.getElementById('exitBtn').addEventListener('click', function(){
     clearTimers(); state='idle';
-    $game.classList.add('hidden'); $setup.classList.remove('hidden');
+    $game.classList.add('hidden');
+    // si ya se completó alguna partida, muestra los resultados en vez de perderlos
+    if(session.played>0){ showFinal(); }
+    else{ $setup.classList.remove('hidden'); }
   });
 
   // gancho de verificación (pruebas)
