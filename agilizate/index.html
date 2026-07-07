@@ -246,6 +246,7 @@
         <div class="chips" id="netChips" role="group" aria-label="Modo de juego">
           <button class="chip" data-v="local" aria-pressed="true">Un solo dispositivo</button>
           <button class="chip" data-v="online" aria-pressed="false">En línea, cada quien el suyo</button>
+          <button class="chip" data-v="solo" aria-pressed="false">Solitario, 1 jugador</button>
         </div>
       </div>
       <div class="field hidden" id="onlineField">
@@ -260,6 +261,22 @@
         </div>
         <p class="dealhint" id="netStatus">Quien crea la sala comparte el código de 4 letras; los demás lo escriben en su celular para entrar. Las cartas y partidas las decide quien crea la sala.</p>
       </div>
+      <div class="field hidden" id="soloField">
+        <label>Reto en solitario</label>
+        <div class="chips" id="soloChips" role="group" aria-label="Tipo de reto">
+          <button class="chip" data-v="practica" aria-pressed="true">Práctica libre</button>
+          <button class="chip" data-v="reloj" aria-pressed="false">Contrarreloj</button>
+        </div>
+        <div class="chips hidden" id="soloTimeChips" role="group" aria-label="Tiempo del reto">
+          <button class="chip" data-v="30" aria-pressed="false">30 s</button>
+          <button class="chip" data-v="60" aria-pressed="true">60 s</button>
+          <button class="chip" data-v="90" aria-pressed="false">90 s</button>
+        </div>
+        <p class="dealhint" id="soloHint"></p>
+        <div class="joinrow">
+          <input id="soloName" type="text" maxlength="14" placeholder="Tu nombre">
+        </div>
+      </div>
       <div class="field" id="playersField">
         <label>Jugadores</label>
         <div class="chips" id="playersChips" role="group" aria-label="Número de jugadores"></div>
@@ -269,7 +286,7 @@
         <div class="chips" id="cardsChips" role="group" aria-label="Cartas por jugador"></div>
         <p class="dealhint" id="dealHint"></p>
       </div>
-      <div class="field">
+      <div class="field" id="gamesField">
         <label>Partidas en la sesión</label>
         <div class="chips" id="gamesChips" role="group" aria-label="Partidas de la sesión">
           <button class="chip" data-v="1" aria-pressed="false">1 partida</button>
@@ -336,6 +353,7 @@
     <div class="standings" id="standings"></div>
     <div class="standings" id="sessionScore"></div>
     <button id="againBtn">Siguiente partida</button>
+    <button id="victoryMenuBtn" class="ghost hidden" type="button">Menú principal</button>
   </section>
 
   <!-- Resultados de la sesión -->
@@ -363,6 +381,11 @@
       <caption>Jugadores guardados</caption>
       <thead><tr><th>Jugador</th><th>Partidas</th><th>Victorias</th></tr></thead>
       <tbody id="recPlayers"></tbody>
+    </table>
+    <table class="results">
+      <caption>Récords en solitario</caption>
+      <thead><tr><th>Reto</th><th>Mejor tiempo</th><th>Jugador</th></tr></thead>
+      <tbody id="recSolo"></tbody>
     </table>
     <table class="results">
       <caption>Últimas partidas</caption>
@@ -503,6 +526,7 @@
     return {players:{}, history:[]};
   }
   var store=loadStore();
+  store.solo = store.solo || {}; // récords del modo solitario
   function saveStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){} }
   function esc(s){
     return String(s).replace(/[&<>"']/g, function(c){
@@ -536,6 +560,8 @@
   var PLAYER_COLORS = ['#E8413C','#2F6BFF','#FFC61A','#17B26A','#8B5CF6','#FF7A1A'];
   var cfg = {players:2, cards:9, games:3}; // cards: número o 'max'
   var names = []; // nombres escritos por los jugadores
+  var uiMode = 'local'; // local | online | solo
+  var SOLO_CARD_OPTS = [5,10,15,20];
 
   function savedUsers(){
     return Object.keys(store.players).map(function(k){ return store.players[k]; })
@@ -562,6 +588,7 @@
     var chip=e.target.closest('.chip');
     if(!chip) return;
     var name=chip.getAttribute('data-name');
+    if(uiMode==='solo'){ document.getElementById('soloName').value=name; return; }
     var inputs=document.querySelectorAll('#nameFields input');
     var i, taken=false;
     for(i=0;i<inputs.length;i++){
@@ -582,6 +609,11 @@
     return cfg.cards==='max' ? mx : Math.min(cfg.cards, mx);
   }
   function updateDealHint(){
+    if(uiMode==='solo'){
+      document.getElementById('dealHint').innerHTML =
+        'Jugarás con <b>'+perPlayer(1)+' cartas</b>; una carta abre el centro.';
+      return;
+    }
     var per = perPlayer(cfg.players);
     var used = per*cfg.players + 1;
     var msg = 'Se reparten <b>'+per+' cartas a cada uno</b> de los '+cfg.players+
@@ -592,8 +624,18 @@
 
   function buildCardChips(){
     var box = document.getElementById('cardsChips');
-    var mx = maxPer(cfg.players);
     box.innerHTML='';
+    if(uiMode==='solo'){
+      if(SOLO_CARD_OPTS.indexOf(cfg.cards)<0) cfg.cards=10;
+      SOLO_CARD_OPTS.forEach(function(v){
+        var b=document.createElement('button');
+        b.className='chip'; b.dataset.v=v; b.textContent=v+' cartas';
+        b.setAttribute('aria-pressed', cfg.cards===v ? 'true':'false');
+        box.appendChild(b);
+      });
+      return;
+    }
+    var mx = maxPer(cfg.players);
     [5,7,9].filter(function(v){ return v<mx; }).forEach(function(v){
       var b=document.createElement('button');
       b.className='chip'; b.dataset.v=v; b.textContent=v+' cartas';
@@ -603,6 +645,7 @@
     m.className='chip'; m.dataset.v='max'; m.textContent='Máximo ('+mx+')';
     box.appendChild(m);
     var sel = (cfg.cards==='max' || cfg.cards>=mx) ? 'max' : String(cfg.cards);
+    if(sel!=='max' && [5,7,9].indexOf(+sel)<0){ sel='max'; cfg.cards='max'; }
     box.querySelectorAll('.chip').forEach(function(c){
       c.setAttribute('aria-pressed', c.dataset.v===sel ? 'true':'false');
     });
@@ -849,8 +892,17 @@
     startGame();
   }
 
-  document.getElementById('startBtn').addEventListener('click', startSession);
+  document.getElementById('startBtn').addEventListener('click', function(){
+    if(uiMode==='solo'){ startSolo(); return; }
+    startSession();
+  });
   document.getElementById('againBtn').addEventListener('click', function(){
+    if(solo.active){
+      $victory.classList.add('hidden');
+      document.getElementById('victoryMenuBtn').classList.add('hidden');
+      startSoloRun();
+      return;
+    }
     if(net.active){
       if(!net.isHost) return;
       if(osession.played < osession.planned){
@@ -890,11 +942,24 @@
                  '<td class="num">'+u.games+'</td><td class="num">'+u.wins+'</td></tr>';
         }).join('')
       : '<tr><td colspan="3">Aún no hay jugadores guardados. Escribe tu nombre antes de jugar.</td></tr>';
+    var soloKeys=Object.keys(store.solo||{});
+    document.getElementById('recSolo').innerHTML = soloKeys.length
+      ? soloKeys.map(function(k){ return store.solo[k]; })
+          .sort(function(a,b){ return (b.t||0)-(a.t||0); })
+          .map(function(r){
+            return '<tr><td>'+esc(r.label||'Reto')+'</td>'+
+                   '<td class="num">'+fmtMs(r.ms)+'</td>'+
+                   '<td><b>'+esc(r.name)+'</b></td></tr>';
+          }).join('')
+      : '<tr><td colspan="3">Aún no hay récords. Prueba el modo solitario.</td></tr>';
     document.getElementById('recGames').innerHTML = store.history.length
       ? store.history.slice(0,20).map(function(h){
-          return '<tr><td>'+fmtDate(h.t)+'</td>'+
-                 '<td>'+h.players.map(esc).join(', ')+'</td>'+
-                 '<td><b>'+esc(h.winner)+'</b></td></tr>';
+          var who=h.players.map(esc).join(', ')+(h.solo?' · solitario':'');
+          var win=h.solo
+            ? (h.winner==='—' ? 'No completado'
+               : '<b>'+esc(h.winner)+'</b>'+(h.time?' · '+fmtMs(h.time):''))
+            : '<b>'+esc(h.winner)+'</b>';
+          return '<tr><td>'+fmtDate(h.t)+'</td><td>'+who+'</td><td>'+win+'</td></tr>';
         }).join('')
       : '<tr><td colspan="3">Aún no se ha jugado ninguna partida.</td></tr>';
   }
@@ -909,11 +974,12 @@
   });
   document.getElementById('clearBtn').addEventListener('click', function(){
     if(!confirm('¿Borrar todo el historial y los jugadores guardados?')) return;
-    store={players:{}, history:[]};
+    store={players:{}, history:[], solo:{}};
     saveStore(); renderSavedChips(); renderRecords();
   });
   renderSavedChips();
   document.getElementById('exitBtn').addEventListener('click', function(){
+    if(solo.active){ stopSolo(); return; }
     if(net.active){ netLeave(); return; }
     clearTimers(); state='idle';
     $game.classList.add('hidden');
@@ -964,14 +1030,14 @@
     var mx=Math.floor(54/oplayers.length);
     return cfg.cards==='max'? mx : Math.min(cfg.cards, mx);
   }
-  function runCountdown(done){
+  function runCountdown(done, endState){
     state='countdown';
     $count.classList.remove('hidden');
     var steps=['3','2','1','¡YA!'];
     steps.forEach(function(s,i){
       later(function(){ $count.textContent=s; if(s==='¡YA!'){sfx.go();}else{sfx.count();} }, i*700);
     });
-    later(function(){ $count.classList.add('hidden'); state='oplaying'; done(); }, steps.length*700);
+    later(function(){ $count.classList.add('hidden'); state=endState||'oplaying'; done(); }, steps.length*700);
   }
   function cardBackSVG(){
     return '<circle cx="50" cy="50" r="48.5" fill="#20264A" stroke="#E9DCBE" stroke-width="2"/>'+
@@ -984,11 +1050,15 @@
   netChipsBox.addEventListener('click', function(e){
     var chip=e.target.closest('.chip'); if(!chip) return;
     netChipsBox.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip?'true':'false'); });
-    var online=chip.dataset.v==='online';
+    uiMode=chip.dataset.v;
+    var online=uiMode==='online', soloM=uiMode==='solo';
     document.getElementById('onlineField').classList.toggle('hidden', !online);
-    document.getElementById('playersField').classList.toggle('hidden', online);
-    document.getElementById('namesField').classList.toggle('hidden', online);
+    document.getElementById('soloField').classList.toggle('hidden', !soloM);
+    document.getElementById('playersField').classList.toggle('hidden', online||soloM);
+    document.getElementById('namesField').classList.toggle('hidden', online||soloM);
+    document.getElementById('gamesField').classList.toggle('hidden', soloM);
     document.getElementById('startBtn').classList.toggle('hidden', online);
+    buildCardChips(); updateDealHint(); updateSoloHint();
     if(online){
       document.getElementById('savedField').classList.add('hidden');
       if(typeof Peer==='undefined'){
@@ -1291,6 +1361,7 @@
     runCountdown(function(){ renderOnline(); });
   }
   function onlineTap(sym){
+    if(state==='splaying'){ soloTap(sym); return; }
     if(state!=='oplaying' || gFrozen || gMyCount===0) return;
     if(net.isHost) hostTap(oplayers[0], sym);
     else{ try{ net.conn.send({t:'tap', sym:sym}); }catch(e){} }
@@ -1369,6 +1440,158 @@
       return '<tr><td><b style="color:'+PLAYER_COLORS[r.i%6]+'">'+esc(r.n)+'</b></td><td class="num">'+r.w+'</td></tr>';
     }).join('');
   }
+
+  /* ================== MODO SOLITARIO ================== */
+  var solo={active:false, challenge:'practica', time:60, per:10, name:'',
+            pile:[], center:-1, errors:0, startT:0, deadline:0, timer:null};
+
+  function updateSoloHint(){
+    var h=document.getElementById('soloHint');
+    if(solo.challenge==='reloj'){
+      h.textContent='Descarta todas tus cartas antes de que se acabe el tiempo. Tu mejor marca queda guardada.';
+    }else{
+      h.textContent='Sin presión: descarta todas tus cartas mientras medimos tu tiempo y tus errores. Tu mejor tiempo queda guardado.';
+    }
+    document.getElementById('soloTimeChips').classList.toggle('hidden', solo.challenge!=='reloj');
+  }
+  document.getElementById('soloChips').addEventListener('click', function(e){
+    var chip=e.target.closest('.chip'); if(!chip) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip?'true':'false'); });
+    solo.challenge=chip.dataset.v;
+    updateSoloHint();
+  });
+  document.getElementById('soloTimeChips').addEventListener('click', function(e){
+    var chip=e.target.closest('.chip'); if(!chip) return;
+    this.querySelectorAll('.chip').forEach(function(c){ c.setAttribute('aria-pressed', c===chip?'true':'false'); });
+    solo.time=+chip.dataset.v;
+  });
+  updateSoloHint();
+
+  function fmtMs(ms){
+    var s=ms/1000;
+    return s>=60 ? Math.floor(s/60)+'m '+(s%60).toFixed(1)+'s' : s.toFixed(1)+'s';
+  }
+  function soloLabel(){
+    return (solo.challenge==='reloj' ? 'Contrarreloj '+solo.time+'s' : 'Práctica')+' · '+solo.per+' cartas';
+  }
+  function soloKey(){
+    return solo.challenge+'-'+solo.per+(solo.challenge==='reloj' ? '-'+solo.time : '');
+  }
+
+  function startSolo(){
+    solo.name=(document.getElementById('soloName').value.trim()||'Tú');
+    solo.per=(typeof cfg.cards==='number') ? cfg.cards : 10;
+    solo.active=true;
+    startSoloRun();
+  }
+  function startSoloRun(){
+    var order=shuffle(DECK.map(function(_,i){ return i; }));
+    var deal=order.slice(2);
+    solo.center=deal[0];
+    solo.pile=deal.slice(1, 1+solo.per);
+    solo.errors=0;
+    gNames=[solo.name]; gMyIdx=0; gCounts=[solo.per];
+    gCenter=solo.center;
+    gMyTop=solo.pile[solo.pile.length-1]; gMyCount=solo.pile.length; gFrozen=false;
+    [$setup,$victory,document.getElementById('final')].forEach(function(s){ s.classList.add('hidden'); });
+    $game.classList.remove('hidden');
+    document.getElementById('deckLabel').textContent=soloLabel();
+    buildOnlineZones();
+    $center.innerHTML='';
+    if(oz.svg) oz.svg.innerHTML='';
+    runCountdown(function(){
+      solo.startT=Date.now();
+      solo.deadline=solo.startT + solo.time*1000;
+      renderOnline();
+      soloStartTimer();
+    }, 'splaying');
+  }
+  function soloStartTimer(){
+    if(solo.timer) clearInterval(solo.timer);
+    var base=soloLabel();
+    solo.timer=setInterval(function(){
+      if(state!=='splaying') return;
+      var el=document.getElementById('deckLabel');
+      if(solo.challenge==='reloj'){
+        var left=(solo.deadline-Date.now())/1000;
+        if(left<=0){ el.textContent=base+' · ⏱ 0.0 s'; soloEnd(false); return; }
+        el.textContent=base+' · ⏱ '+left.toFixed(1)+' s · ✗ '+solo.errors;
+      }else{
+        el.textContent=base+' · ⏱ '+((Date.now()-solo.startT)/1000).toFixed(1)+' s · ✗ '+solo.errors;
+      }
+    }, 100);
+  }
+  function soloTap(sym){
+    if(gFrozen || !solo.pile.length) return;
+    var top=solo.pile[solo.pile.length-1];
+    if(DECK[top].indexOf(sym)<0) return;
+    if(DECK[solo.center].indexOf(sym)>=0){
+      solo.center=solo.pile.pop();
+      gCenter=solo.center;
+      gMyTop=solo.pile.length? solo.pile[solo.pile.length-1] : -1;
+      gMyCount=solo.pile.length; gCounts=[gMyCount];
+      sfx.good();
+      renderOnline();
+      if(!solo.pile.length) soloEnd(true);
+    }else{
+      solo.errors++;
+      guestFreezeUI();
+    }
+  }
+  function registerSolo(completed, ms){
+    store.history.unshift({t:Date.now(), players:[solo.name], solo:true, cards:solo.per,
+                           winner: completed? solo.name : '—', time: completed? ms : null});
+    if(store.history.length>200) store.history.length=200;
+    if(!isDefaultName(solo.name) && solo.name!=='Tú'){
+      var k=solo.name.toLowerCase();
+      var u=store.players[k] || {name:solo.name, games:0, wins:0, last:0};
+      u.games++; if(completed) u.wins++;
+      u.last=Date.now();
+      store.players[k]=u;
+    }
+    saveStore();
+    renderSavedChips();
+  }
+  function soloEnd(completed){
+    if(state!=='splaying') return;
+    state='sover';
+    if(solo.timer){ clearInterval(solo.timer); solo.timer=null; }
+    var ms=Date.now()-solo.startT;
+    registerSolo(completed, ms);
+    var key=soloKey(), best=store.solo[key];
+    var isRecord = completed && (!best || ms<best.ms);
+    if(isRecord){
+      store.solo[key]={ms:ms, name:solo.name, label:soloLabel(), t:Date.now()};
+      saveStore();
+    }
+    setTimeout(function(){
+      $game.classList.add('hidden'); $victory.classList.remove('hidden');
+      document.getElementById('winnerText').textContent = completed ? '¡Completaste el reto!' : '¡Se acabó el tiempo!';
+      document.getElementById('victory').style.setProperty('--wc', completed ? 'var(--verde)' : 'var(--rojo)');
+      var rows=['<span>Reto: <b>'+esc(soloLabel())+'</b></span>'];
+      if(completed) rows.push('<span>Tiempo: <b>'+fmtMs(ms)+'</b></span>');
+      else rows.push('<span>Te faltaron <b>'+solo.pile.length+' cartas</b></span>');
+      rows.push('<span>Errores: <b>'+solo.errors+'</b></span>');
+      document.getElementById('standings').innerHTML=rows.join('');
+      document.getElementById('sessionScore').innerHTML =
+        isRecord ? '<span>🏅 ¡Nuevo récord personal!</span>'
+        : (best ? '<span>Tu récord: '+fmtMs(best.ms)+'</span>' : '');
+      var ab=document.getElementById('againBtn');
+      ab.classList.remove('hidden');
+      ab.textContent = completed ? 'Jugar de nuevo' : 'Reintentar';
+      document.getElementById('victoryMenuBtn').classList.remove('hidden');
+      if(completed) sfx.win(); else sfx.bad();
+    }, 600);
+  }
+  function stopSolo(){
+    if(solo.timer){ clearInterval(solo.timer); solo.timer=null; }
+    solo.active=false; state='idle';
+    clearTimers();
+    [$game,$victory].forEach(function(s){ s.classList.add('hidden'); });
+    document.getElementById('victoryMenuBtn').classList.add('hidden');
+    $setup.classList.remove('hidden');
+  }
+  document.getElementById('victoryMenuBtn').addEventListener('click', stopSolo);
 
   // gancho de verificación (pruebas)
   window.__agilizate = { DECK: DECK };
