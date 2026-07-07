@@ -26,7 +26,8 @@ En computadora cada jugador también puede usar su zona; en el celular o la tabl
 ## Modos de juego
 
 - **Un solo dispositivo**: pongan un teléfono o tableta al centro de la mesa; cada jugador tiene su zona.
-- **En línea, cada quien el suyo** 🆕: un jugador **crea la sala** y comparte el **código de 4 letras**; los demás lo escriben en su celular y se unen (hasta 6 jugadores). Cada quien ve **solo sus cartas en su propia pantalla** — los rivales aparecen boca abajo. La conexión es directa entre los dispositivos (WebRTC), sin cuentas ni servidores propios.
+- **En línea, cada quien el suyo**: un jugador **crea la sala** y comparte el **código de 4 letras**; los demás lo escriben en su celular y se unen (hasta 6 jugadores). Cada quien ve **solo sus cartas en su propia pantalla** — los rivales aparecen boca abajo. La conexión es directa entre los dispositivos (WebRTC), sin cuentas ni servidores propios.
+- **Solitario, 1 jugador** 🆕: dos retos a elegir — **Práctica libre** (descarta todas tus cartas mientras se mide tu tiempo y tus errores) y **Contrarreloj** (complétalo antes de que acabe el tiempo: 30, 60 o 90 s). Con 5, 10, 15 o 20 cartas, y **récords personales guardados** que puedes consultar en el historial.
 
 ## Características
 
